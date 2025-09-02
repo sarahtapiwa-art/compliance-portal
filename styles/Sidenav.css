@@ -1,0 +1,185 @@
+.side-nav {
+    width: 200px;
+    height: 200vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+    padding-top: 60px;
+    transition: transform 0.2s ease;
+    z-index: 90;
+    margin-top: 20px;
+  }
+  
+  .side-nav-header {
+    padding: 12px 16px 6px;
+  }
+  
+  .side-nav-title {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 5px;
+  }
+  
+  .side-nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .side-nav-item {
+    position: relative;
+    margin: 2px 8px;
+  }
+  
+  .side-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  
+  .side-nav-icon {
+    display: flex;
+    margin-right: 8px;
+    color: #64748b;
+    transition: all 0.15s;
+  }
+  
+  .side-nav-text {
+    flex-grow: 1;
+  }
+  
+  .side-nav-arrow {
+    display: flex;
+    color: #006834;
+  }
+  
+  .side-nav-item.active {
+    background: #f5f3ff;
+  }
+  
+  .side-nav-item.active .side-nav-link,
+  .side-nav-item.active .side-nav-icon {
+    color: #006834;
+  }
+  
+  .side-nav-item:not(.active):hover {
+    background: #f8fafc;
+  }
+  
+  .side-nav-item:not(.active):hover .side-nav-link {
+    color: #334155;
+  }
+  
+  .side-nav-item:not(.active):hover .side-nav-icon {
+    color: #006834;
+  }
+  
+  .mobile-menu-button {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 5px;
+    cursor: pointer;
+  }
+  
+  .mobile-nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 80;
+    display: none;
+  }
+  
+  @media (max-width: 768px) {
+    .side-nav {
+      transform: translateX(-100%);
+      width: 240px;
+      box-shadow: 1px 0 6px rgba(0, 0, 0, 0.1);
+      padding-top: 12px;
+      margin-top: 60px;
+    }
+  
+    .side-nav.open {
+      transform: translateX(0);
+    }
+  
+    .mobile-menu-button {
+      display: block;
+    }
+  
+    .mobile-nav-overlay {
+      display: block;
+    }
+  }
+  
+  
+  .side-nav-item.active {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .has-subitems {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  
+  .submenu {
+    list-style: none;
+    padding-left: 2rem;
+    margin-top: 0.25rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    color: #475569;
+    font-size: small;
+    font-weight: 600;
+  }
+  
+  .submenu-item {
+    padding: 0.5rem 0;
+  }
+  
+  .submenu-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    color: #475569;
+    font-family: 20px;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  
+  .submenu-link:hover {
+    color: #475569;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .submenu-item.active .submenu-link {
+    color: #006834;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .submenu-icon {
+    margin-right: 0.5rem;
+    display: flex;
+    align-items: center;
+  }
