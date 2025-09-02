@@ -23,7 +23,7 @@ pipeline {
             steps {
                 // Checkout code from GitHub
                 git(
-                    url: 'https://github.com/your-username/your-repo.git',
+                    url: 'git@github.com:National-Building-Society/compliance-portal.git',
                     credentialsId: 'github-token',
                     branch: 'main'
                 )
