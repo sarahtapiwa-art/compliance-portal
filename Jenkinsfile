@@ -24,7 +24,7 @@ pipeline {
                 // Checkout code from GitHub
                 git(
                     url: 'git@github.com:National-Building-Society/compliance-portal.git',
-                    credentialsId: 'github-token',
+                    credentialsId: 'github-ssh-key',
                     branch: 'main'
                 )
                 
