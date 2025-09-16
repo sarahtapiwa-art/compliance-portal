@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+This project is a Compliance Portal built with Next.js. It provides functionalities for managing audit trails, user authentication, department management, document handling, return definitions, scheduling, submission tracking, and user management.
 
 ## Getting Started
 
@@ -6,12 +6,6 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -20,17 +14,46 @@ You can start editing the page by modifying `app/page.js`. The page auto-updates
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy on CentOS Server
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To deploy this Next.js application on a CentOS server, follow these steps:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. Application Deployment
 
-## Deploy on Vercel
+a. **Navigate to the application directory:**
+```bash
+scp -r ./src/ <username>@<server-address>:/var/www/compliance.nbs.co.zw
+cd /var/www/compliance.nbs.co.zw
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+b. **Navigate to the server:**
+```bash
+cd /var/www/compliance.nbs.co.zw
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+c. **Build the Next.js application:**
+   Before building, ensure to remove any previous build artifacts:
+```bash
+rm -rf .next
+npm run build
+```
+
+d. **Start the application in production mode:**
+   You can use a process manager like PM2 to keep your application running:
+
+   **Start your application with PM2:**
+```bash
+pm2 restart npm --name "compliance-app"
+```
+
+Your Next.js Compliance Portal should now be accessible via http://192.168.1.145:3000/
+
+## Version Control and Branching Strategy
+
+This project's source code is hosted on GitHub: https://github.com/National-Building-Society/compliance-portal
+
+**Branching Strategy:**
+- The `main` branch is used for production deployments.
+- The `develop` branch is used for active development and new changes.
+
