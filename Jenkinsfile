@@ -1,7 +1,7 @@
 pipeline {
     agent any
      tools {
-        nodejs 'NODE23' // Match the name from Global Tool Configuration
+        nodejs 'Node23' // Match the name from Global Tool Configuration
     }
 
     environment {
