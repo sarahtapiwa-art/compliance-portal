@@ -38,20 +38,16 @@ pipeline {
         
         stage('Install Dependencies') {
             steps {
-                // Use Node.js environment
-                nodejs(nodeJSInstallationName: 'NodeJS') {
-                    // Install dependencies
+                nodejs( 'Node23') {
                     sh 'npm ci --prefer-offline'
-                    
-                    // Or if using yarn:
-                    // sh 'yarn install --frozen-lockfile'
                 }
             }
         }
+
         
         stage('Lint and Test') {
             steps {
-                nodejs(nodeJSInstallationName: 'NodeJS') {
+                nodejs('Node23') {
                     // Run linting
                     sh 'npm run lint || true'  // Continue even if lint fails
                     
@@ -63,7 +59,7 @@ pipeline {
         
         stage('Build') {
             steps {
-                nodejs(nodeJSInstallationName: 'NodeJS') {
+                nodejs('Node23') {
                     // Build the Next.js application
                     sh 'npm run build'
                 }
