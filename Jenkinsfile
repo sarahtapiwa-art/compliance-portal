@@ -1,5 +1,8 @@
 pipeline {
     agent any
+     tools {
+        nodejs 'NODE23' // Match the name from Global Tool Configuration
+    }
 
     environment {
         REPO_URL = 'https://github.com/National-Building-Society/compliance-portal.git'
