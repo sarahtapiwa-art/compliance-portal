@@ -1,9 +1,9 @@
 pipeline {
     agent any
-    
+
     environment {
         // GitHub credentials
-        GITHUB_CREDENTIALS = credentials('github-token')
+        GITHUB_CREDENTIALS = credentials('github-pat')
         
         // Build environment
         NODE_ENV = 'production'
@@ -12,65 +12,47 @@ pipeline {
         // Deployment server (if using SSH)
         DEPLOY_SERVER = 'your-server-alias'
     }
-    
+
     options {
         timeout(time: 30, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                // Checkout code from GitHub
                 git(
                     url: 'https://github.com/National-Building-Society/compliance-portal.git',
                     branch: 'main',
                     credentialsId: 'github-pat'
                 )
-                
-                // Store Git commit info
+
                 script {
                     env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
                     env.GIT_BRANCH = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
                 }
             }
         }
-        
-        // stage('Install Dependencies') {
-        //     sh 'node -v'
-        //     sh 'npm ci --prefer-offline'
-        //     }
-        // }
 
-        
-        // stage('Lint and Test') {
-        //     steps {
-        //         nodejs('Node23') {
-        //             // Run linting
-        //             sh 'npm run lint || true'  // Continue even if lint fails
-                    
-        //             // Run tests
-        //             sh 'npm test -- --passWithNoTests || true'
-        //         }
-        //     }
-        // }
-        
+        stage('Install Dependencies') {
+            steps {
+                sh 'node -v'
+                sh 'npm ci --prefer-offline'
+            }
+        }
+
         stage('Build') {
             steps {
-                nodejs('Node23') {
-                    // Build the Next.js application
-                    sh 'npm run build'
-                }
+                sh 'npm run build'
                 
                 // Archive artifacts
                 archiveArtifacts artifacts: '.next/**/*, public/**/*, package*.json', fingerprint: true
             }
         }
-        
+
         stage('Deploy') {
             steps {
                 script {
-                    // Choose deployment method based on your setup
                     if (params.DEPLOY_TO_STAGING) {
                         deployToStaging()
                     } else if (params.DEPLOY_TO_PRODUCTION) {
@@ -82,20 +64,10 @@ pipeline {
             }
         }
     }
-    
+
     post {
         always {
-            // Clean up workspace
             cleanWs()
-            
-            // Send notifications
-            // script {
-            //     if (currentBuild.result == 'SUCCESS') {
-            //         slackSend(color: 'good', message: "Build ${env.JOB_NAME} #${env.BUILD_NUMBER} succeeded!")
-            //     } else if (currentBuild.result == 'FAILURE') {
-            //         slackSend(color: 'danger', message: "Build ${env.JOB_NAME} #${env.BUILD_NUMBER} failed!")
-            //     }
-            // }
         }
     }
 }
@@ -104,7 +76,6 @@ pipeline {
 def deployToStaging() {
     echo 'Deploying to staging environment...'
     
-    // Example: Deploy via SSH
     sshPublisher(
         publishers: [
             sshPublisherDesc(
@@ -129,10 +100,6 @@ def deployToStaging() {
 def deployToProduction() {
     echo 'Deploying to production environment...'
     
-    // Example: Deploy to Vercel (if using)
-    // sh 'npx vercel --prod --token=$VERCEL_TOKEN'
-    
-    // Or deploy via SSH
     sshPublisher(
         publishers: [
             sshPublisherDesc(
