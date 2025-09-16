@@ -1,6 +1,6 @@
 pipeline {
     agent any
-
+// set environments
     environment {
         REPO_URL = 'https://github.com/National-Building-Society/compliance-portal.git'
         DEPLOY_SERVER = '192.168.1.145'
