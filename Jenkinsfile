@@ -31,6 +31,7 @@ pipeline {
                 }
             }
         }
+        
 
         stage('Install Dependencies') {
             steps {nodeJSInstallationName: 'Node23'
@@ -39,6 +40,13 @@ pipeline {
                 }
             }
         }
+        stage('Check Node') {
+    steps {
+        sh 'node -v'
+        sh 'npm -v'
+    }
+}
+
 
         stage('Build') {
             steps {
