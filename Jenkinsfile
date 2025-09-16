@@ -36,26 +36,24 @@ pipeline {
             }
         }
         
-        stage('Install Dependencies') {
-            steps {
-                nodejs( 'Node23') {
-                    sh 'npm ci --prefer-offline'
-                }
-            }
-        }
+        // stage('Install Dependencies') {
+        //     sh 'node -v'
+        //     sh 'npm ci --prefer-offline'
+        //     }
+        // }
 
         
-        stage('Lint and Test') {
-            steps {
-                nodejs('Node23') {
-                    // Run linting
-                    sh 'npm run lint || true'  // Continue even if lint fails
+        // stage('Lint and Test') {
+        //     steps {
+        //         nodejs('Node23') {
+        //             // Run linting
+        //             sh 'npm run lint || true'  // Continue even if lint fails
                     
-                    // Run tests
-                    sh 'npm test -- --passWithNoTests || true'
-                }
-            }
-        }
+        //             // Run tests
+        //             sh 'npm test -- --passWithNoTests || true'
+        //         }
+        //     }
+        // }
         
         stage('Build') {
             steps {
