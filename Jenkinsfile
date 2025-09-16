@@ -23,9 +23,9 @@ pipeline {
             steps {
                 // Checkout code from GitHub
                 git(
-                    url: 'git@github.com:National-Building-Society/compliance-portal.git',
-                    credentialsId: 'github-ssh-key',
-                    branch: 'main'
+                    url: 'https://github.com/National-Building-Society/compliance-portal.git',
+                    branch: 'main',
+                    credentialsId: 'github-pat'
                 )
                 
                 // Store Git commit info
