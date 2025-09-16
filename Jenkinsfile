@@ -2,15 +2,13 @@ pipeline {
     agent any
 
     environment {
-        // GitHub credentials
         GITHUB_CREDENTIALS = credentials('github-pat')
         
-        // Build environment
         NODE_ENV = 'production'
         NEXT_TELEMETRY_DISABLED = '1'
         
-        // Deployment server (if using SSH)
-        DEPLOY_SERVER = 'your-server-alias'
+        DEPLOY_SERVER = '192.168.1.145'
+        DEPLOY_DIR = '/var/www/compliance.nbs.co.zw'
     }
 
     options {
@@ -35,32 +33,47 @@ pipeline {
         }
 
         stage('Install Dependencies') {
-            steps {
-                sh 'node -v'
-                sh 'npm ci --prefer-offline'
+            steps {nodeJSInstallationName: 'Node23'
+                nodejs(nodeJSInstallationName: 'Node23') {
+                    sh 'npm install'
+                }
             }
         }
 
         stage('Build') {
             steps {
-                sh 'npm run build'
+                nodejs(nodeJSInstallationName: 'Node23') {
+                    sh 'npm run build'
+                }
                 
-                // Archive artifacts
                 archiveArtifacts artifacts: '.next/**/*, public/**/*, package*.json', fingerprint: true
             }
         }
 
+
         stage('Deploy') {
             steps {
-                script {
-                    if (params.DEPLOY_TO_STAGING) {
-                        deployToStaging()
-                    } else if (params.DEPLOY_TO_PRODUCTION) {
-                        deployToProduction()
-                    } else {
-                        echo 'Build completed successfully. Deployment skipped.'
-                    }
-                }
+                echo "Deploying to ${env.DEPLOY_SERVER}:${env.DEPLOY_DIR}"
+                
+                sshPublisher(
+                    publishers: [
+                        sshPublisherDesc(
+                            configName: env.DEPLOY_SERVER,
+                            transfers: [
+                                sshTransfer(
+                                    sourceFiles: '**/*',
+                                    removePrefix: '',
+                                    remoteDirectory: env.DEPLOY_DIR,
+                                    execCommand: """
+                                        cd ${env.DEPLOY_DIR}
+                                        npm ci --production
+                                        pm2 restart compliance-app || pm2 start npm --name "compliance-app" -- start
+                                    """
+                                )
+                            ]
+                        )
+                    ]
+                )
             }
         }
     }
@@ -70,53 +83,4 @@ pipeline {
             cleanWs()
         }
     }
-}
-
-// Deployment functions
-def deployToStaging() {
-    echo 'Deploying to staging environment...'
-    
-    sshPublisher(
-        publishers: [
-            sshPublisherDesc(
-                configName: env.DEPLOY_SERVER,
-                transfers: [
-                    sshTransfer(
-                        sourceFiles: '**/*',
-                        removePrefix: '',
-                        remoteDirectory: '/var/www/staging',
-                        execCommand: '''
-                            cd /var/www/staging
-                            npm ci --production
-                            pm2 restart staging-app || pm2 start npm --name "staging-app" -- start
-                        '''
-                    )
-                ]
-            )
-        ]
-    )
-}
-
-def deployToProduction() {
-    echo 'Deploying to production environment...'
-    
-    sshPublisher(
-        publishers: [
-            sshPublisherDesc(
-                configName: env.DEPLOY_SERVER,
-                transfers: [
-                    sshTransfer(
-                        sourceFiles: '**/*',
-                        removePrefix: '',
-                        remoteDirectory: '/var/www/production',
-                        execCommand: '''
-                            cd /var/www/production
-                            npm ci --production
-                            pm2 restart production-app || pm2 start npm --name "production-app" -- start
-                        '''
-                    )
-                ]
-            )
-        ]
-    )
 }
