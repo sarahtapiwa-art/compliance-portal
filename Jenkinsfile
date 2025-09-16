@@ -23,6 +23,7 @@ pipeline {
                 ])
             }
         }
+        
 
         stage('Install Dependencies') {
             steps {
@@ -31,6 +32,13 @@ pipeline {
                 sh 'npm ci --prefer-offline'
             }
         }
+        stage('Check Node') {
+    steps {
+        sh 'node -v'
+        sh 'npm -v'
+    }
+}
+
 
         stage('Build') {
             steps {
