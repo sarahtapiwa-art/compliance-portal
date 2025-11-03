@@ -6,9 +6,11 @@ import { apiClient } from '../../_utils/apiClient';
 import Notification from '../../_components/Notifications/page'
 
 const columns = [
-  { Header: 'Code', accessor: 'code' },
-  { Header: 'Message', accessor: 'message' },
-  { Header: 'Time', accessor: 'timestamp' },
+  { Header: 'Notification', accessor: 'notificationType' },
+  { Header: 'Subject', accessor: 'emailSubject' },
+  { Header: 'Sent to', accessor: 'emailTarget' },
+  { Header: 'Timer', accessor: (row) => new Date(row.sentAt).toLocaleDateString() },
+
 ];
 
 

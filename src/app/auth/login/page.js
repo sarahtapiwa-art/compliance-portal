@@ -22,7 +22,6 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    router.push('/dashboard');
     try {
       const response = await apiClient.post(
         '/api/auth/login',

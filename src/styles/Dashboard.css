@@ -3,12 +3,18 @@
     margin: 0 auto;
     padding: 0.8rem;
     font-size: 0.9rem;
+    background: linear-gradient(180deg, #f8fafc 0%, #f3f4f6 100%);
+    min-height: 100%;
   }
   
   h1 {
     font-size: 1.3rem;
     margin-bottom: 1rem;
     color: #111827;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
   }
   
   .metrics {
@@ -26,6 +32,9 @@
     display: flex;
     gap: 0.6rem;
     border-left: 3px solid #006834;
+    cursor: pointer;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    position: relative;
   }
   
   .icon {
@@ -33,7 +42,43 @@
     font-size: 1.1rem;
     margin-top: 0.2rem;
   }
+
+/* Color-coded metric variants */
+.metric-total {
+  border-left-color: #0ea5e9;
+}
+.metric-total .icon { color: #0ea5e9; }
+.metric-total:hover { border-left-color: #0284c7; }
+
+.metric-completed {
+  border-left-color: #10b981;
+}
+.metric-completed .icon { color: #10b981; }
+.metric-completed:hover { border-left-color: #059669; }
+
+.metric-overdue {
+  border-left-color: #ef4444;
+}
+.metric-overdue .icon { color: #ef4444; }
+.metric-overdue:hover { border-left-color: #dc2626; }
+
+.metric-upcoming {
+  border-left-color: #f59e0b;
+}
+.metric-upcoming .icon { color: #f59e0b; }
+.metric-upcoming:hover { border-left-color: #d97706; }
   
+  .metric:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    border-left-color: #059669;
+  }
+
+  .metric:focus-visible {
+    outline: 2px solid #059669;
+    outline-offset: 2px;
+  }
+
   h3 {
     font-size: 0.9rem;
     color: #111827;
@@ -60,7 +105,29 @@
     padding: 0.8rem;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     margin-bottom: 1rem;
+    transition: box-shadow 180ms ease, transform 180ms ease;
   }
+
+/* Colored section accents */
+.chart-upcoming h3 {
+  color: #b45309;
+}
+.chart-overdue h3 {
+  color: #b91c1c;
+}
+.chart-completion h3 {
+  color: #065f46;
+}
+
+.chart-upcoming {
+  border-top: 3px solid #f59e0b;
+}
+.chart-overdue {
+  border-top: 3px solid #ef4444;
+}
+.chart-completion {
+  border-top: 3px solid #10b981;
+}
   
   .side-by-side-charts {
     display: grid;
@@ -229,6 +296,8 @@
   border: 1px solid #eee;
   border-radius: 6px;
   background: #f9f9f9;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  cursor: pointer;
 }
 
 .data-item-overdue {
@@ -236,6 +305,18 @@
   border: 1px solid #eee;
   border-radius: 6px;
   background: #f5cece;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  cursor: pointer;
+}
+
+/* Alert coloring for items */
+.data-item-overdue {
+  border-color: #fecaca;
+  background: #fee2e2;
+}
+.data-item-overdue h4 { color: #b91c1c; }
+.data-item-overdue:hover {
+  box-shadow: 0 8px 22px rgba(239,68,68,0.15);
 }
 
 .data-item h4 {
@@ -274,4 +355,18 @@
   .metrics {
     grid-template-columns: 1fr;
   }
+}
+
+/* Interactive states */
+.data-item:hover, .data-item-overdue:hover, .chart-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+}
+
+.data-item:active, .data-item-overdue:active {
+  transform: translateY(0);
+}
+
+.clickable {
+  cursor: pointer;
 }

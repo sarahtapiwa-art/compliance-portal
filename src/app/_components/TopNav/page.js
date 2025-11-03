@@ -33,17 +33,13 @@ export default function TopNav() {
     try {
       const response = await apiClient.getAccessToken();
       if (response) {
-        console.log(response)
         const tokenData = jwtDecode(response);
-        console.log(tokenData)
-
         setDecodedToken(tokenData);
         const extractedUsername = tokenData.sub;
         setUsername(extractedUsername);
         setData(response.content || []);
       }
     } catch (err) {
-      // console.error('Error decoding token:', err);
       setError(err.message);
     }
   };

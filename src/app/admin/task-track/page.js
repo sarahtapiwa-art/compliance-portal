@@ -6,11 +6,7 @@ import { apiClient } from '../../_utils/apiClient';
 import Notification from '../../_components/Notifications/page'
 
 const columns = [
-    { 
-      Header: 'Status', 
-      accessor: row => row.completed ? 'Completed' : row.submission.status,
-      id: 'status'
-    },
+
     { Header: 'Return Title', accessor: 'submission.returnDefinition.title' },
     { Header: 'Regulatory Body', accessor: 'submission.returnDefinition.regulatoryBody' },
     { Header: 'Assigned To', accessor: 'userEmail' },
@@ -18,12 +14,16 @@ const columns = [
     { Header: 'Period End', accessor: 'submission.periodEnd' },
     { Header: 'Due Date', accessor: 'submission.dueAt' },
     { Header: 'Completed At', accessor: 'completedAt' },
+    { 
+      Header: 'Status', 
+      accessor: row => row.completed ? 'Completed' : row.submission.status,
+      id: 'status'
+    },
   ];
 
   const getCellValue = (row, accessor) => {
     if (typeof accessor === 'function') return accessor(row);
     
-    // Handle nested properties
     if (typeof accessor === 'string' && accessor.includes('.')) {
       const properties = accessor.split('.');
       let value = row;
@@ -56,7 +56,7 @@ const columns = [
     const [showNotification, setShowNotification] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [showSuccessNotification, setShowSuccessNotification] = useState(false);
-    const [filter, setFilter] = useState('all'); // 'all', 'completed', 'pending'
+    const [filter, setFilter] = useState('all'); 
   
     const fetchData = async () => {
       setLoading(true);
@@ -76,27 +76,32 @@ const columns = [
       fetchData();
     }, []);
   
-    // Filter data based on selected filter
     const filteredData = data.filter(item => {
       if (filter === 'completed') return item.completed;
       if (filter === 'pending') return !item.completed;
       return true;
     });
   
-    // Prepare table data with formatted dates
     const tableData = filteredData.map(row => {
       const newRow = {};
       columns.forEach(col => {
         const key = col.id || (typeof col.accessor === 'function' ? col.Header : col.accessor);
         let value = getCellValue(row, col.accessor);
         
-        // Format date fields
-        if (key.includes('Start') || key.includes('End') || key.includes('Due') || key.includes('Completed')) {
+        if (key.includes('Start') || key.includes('End') || key.includes('Date') || key.includes('At')) {
           value = formatDate(value);
         }
         
         newRow[key] = value;
       });
+      if (newRow.status) {
+        newRow.status = (
+        
+            <span className={`status-badge status-${newRow.status.toLowerCase().replace('_', '-')}`}>
+              {newRow.status.replace('_', ' ')}
+            </span>
+        );
+      }
       return newRow;
     });
   

@@ -35,11 +35,11 @@ const SchedulePage = () => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const router = useRouter();
 
+
   const fields = [
     { label: 'Return Definition', name: 'returnDefinitionId', required: true, type: 'select', options: returnDefinitions },
     { label: 'Remind days before (CSV)', name: 'remindDaysBefore', required: true, type: 'text', placeholder: 'e.g., 1,3,7' },
     { label: 'Escalate After (Hours)', name: 'escalateAfterHours', required: true, type: 'number' },
-    { label: 'Escalation Email', name: 'escalationEmail', required: true, type: 'email' },  
   ];
 
   const fetchData = async () => {
@@ -99,9 +99,16 @@ const SchedulePage = () => {
   };
 
   const handleEdit = (row) => {
+    console.log(row);
+    if (!row.id) {
+      setError('Could not find schedule data for editing');
+      setShowNotification(true);
+      return;
+    }
     setEditSchedule(row);
     setShowForm(true);
   };
+
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this schedule rule?')) {
@@ -119,42 +126,18 @@ const SchedulePage = () => {
   };
 
   const tableData = data.map(row => {
-    const newRow = {};
+    const newRow = { ...row };
     columns.forEach(col => {
-      const key = col.Header.replace(/\s+/g, '_').toLowerCase();
+      const key = typeof col.accessor === 'function' ? col.Header : col.accessor;
       newRow[key] = getCellValue(row, col.accessor);
     });
-    return { ...newRow, original: row }; // Keep original data for actions
+    return newRow;
   });
 
-  const tableColumns = [
-    ...columns.map(col => ({
-      Header: col.Header,
-      accessor: col.Header.replace(/\s+/g, '_').toLowerCase(),
-    })),
-    {
-      Header: 'Actions',
-      accessor: 'actions',
-      Cell: ({ row }) => (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button 
-            onClick={() => handleEdit(row.original)}
-            className="edit-button"
-            style={{ padding: '4px 8px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
-          >
-            Edit
-          </button>
-          <button 
-            onClick={() => handleDelete(row.original.id)}
-            className="delete-button"
-            style={{ padding: '4px 8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px' }}
-          >
-            Delete
-          </button>
-        </div>
-      ),
-    }
-  ];
+  const tableColumns = columns.map(col => ({
+    Header: col.Header,
+    accessor: typeof col.accessor === 'function' ? col.Header : col.accessor,
+  }));
 
   return (
     <div style={{ padding: '20px' }}>
@@ -196,15 +179,13 @@ const SchedulePage = () => {
         />
       )}
 
-      {loading ? (
-        <div>Loading schedule rules...</div>
-      ) : (
+
         <Table 
           exportFileName="Schedule_Rules" 
           columns={tableColumns} 
-          data={tableData} 
+          data={tableData}
+          onEdit={handleEdit} 
         />
-      )}
     </div>
   );
 };

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiLogIn, FiUser} from 'react-icons/fi';
 import styles from '../../../../styles/Login.module.css';
-import { useRouter } from 'next/navigation';
 import { apiClient } from '../../../_utils/apiClient';
 
 export default function ResetPasswordPage() {

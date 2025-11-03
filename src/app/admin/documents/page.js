@@ -13,7 +13,6 @@ export default function DocumentsPage() {
     date: ""
   });
 
-  // Handle file upload
   const onDrop = (acceptedFiles) => {
     const mappedFiles = acceptedFiles.map((file) => ({
       name: file.name,
@@ -26,7 +25,6 @@ export default function DocumentsPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
-  // Filter files
   const filteredFiles = files.filter((file) => {
     return (
       (!filters.returnType || file.name.includes(filters.returnType)) &&

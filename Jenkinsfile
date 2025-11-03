@@ -1,8 +1,12 @@
 pipeline {
     agent any
+     tools {
+        nodejs 'Node23' // Match the name from Global Tool Configuration
+    }
+
     environment {
         REPO_URL = 'https://github.com/National-Building-Society/compliance-portal.git'
-        DEPLOY_SERVER = 'deployment-server' // Use the Jenkins config name
+        DEPLOY_SERVER = '192.168.1.145'
         DEPLOY_DIR = '/var/www/compliance.nbs.co.zw'
         NODE_ENV = 'production'
         NEXT_TELEMETRY_DISABLED = '1'
@@ -22,12 +26,22 @@ pipeline {
                 ])
             }
         }
+        
 
         stage('Install Dependencies') {
             steps {
+                sh 'node -v'
+                sh 'npm -v'
                 sh 'npm ci --prefer-offline'
             }
         }
+        stage('Check Node') {
+    steps {
+        sh 'node -v'
+        sh 'npm -v'
+    }
+}
+
 
         stage('Build') {
             steps {
@@ -38,15 +52,17 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
+                    archiveArtifacts artifacts: '.next/**/*, public/**/*, package*.json', fingerprint: true
+
                     sshPublisher(
                         publishers: [
                             sshPublisherDesc(
-                                configName: env.DEPLOY_SERVER,
+                                configName: deployment-server,
                                 transfers: [
                                     sshTransfer(
                                         sourceFiles: '**/*',
                                         removePrefix: '',
-                                        remoteDirectory: env.DEPLOY_DIR,
+                                        remoteDirectory: '',
                                         execCommand: """
                                             cd ${env.DEPLOY_DIR}
                                             npm ci --production
@@ -65,19 +81,7 @@ pipeline {
 
     post {
         always {
-            script {
-                try {
-                    cleanWs()
-                } catch (Exception e) {
-                    echo "Workspace cleanup failed: ${e.message}"
-                }
-            }
-        }
-        success {
-            echo 'Build and deployment completed successfully! 🎉'
-        }
-        failure {
-            echo 'Build or deployment failed. Please check logs. ❌'
+            cleanWs()
         }
     }
 }

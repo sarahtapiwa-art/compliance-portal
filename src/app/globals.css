@@ -427,3 +427,12 @@ span {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+
+.description {
+  color: #666;
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+

@@ -1,14 +1,123 @@
-import React, { useState } from 'react';
-import { FiChevronUp, FiChevronDown, FiSearch, FiEye, FiEdit2, FiTrash2, FiDownload } from 'react-icons/fi';
-import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
-import '../../../styles/Table.css';
+import React, { useState } from "react";
+import {
+  FiChevronUp,
+  FiChevronDown,
+  FiSearch,
+  FiEye,
+  FiEdit2,
+  FiTrash2,
+  FiDownload,
+  FiChevronRight,
+  FiCheckCircle,
+} from "react-icons/fi";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import "../../../styles/Table.css";
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
+const CustomDateInput = ({ value, onClick }) => (
+  <div className="dateInput" onClick={onClick}>
+    <span>
+      {value || 'Select date'}
+    </span>
+  </div>
+);
+
+const CustomDatePicker = ({ 
+  value, 
+  onChange, 
+  placeholder = "Select date",
+  maxDate = "",
+  minDate = ""
+}) => {
+  return (
+    <div >
+      <ReactDatePicker
+        selected={value ? new Date(value) : null}
+        onChange={(date) => {
+          const formattedDate = date ? date.toISOString().split('T')[0] : '';
+          onChange(formattedDate);
+        }}
+        customInput={<CustomDateInput />}
+        dateFormat="yyyy-MM-dd"
+        placeholderText={placeholder}
+        maxDate={maxDate ? new Date(maxDate) : null}
+        minDate={minDate ? new Date(minDate) : null}
+      />
+    </div>
+  );
+};
+
+const DateRangePicker = ({
+  startDateRange,
+  endDateRange,
+  onstartDateRangeChange,
+  onendDateRangeChange,
+  onClear,
+}) => {
+  const getTodayDate = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  return (
+    < >
+      <div style={{ display: "flex", alignItems: "center", gap: "12px"}}>
+        <div className="formGroup">
+          <label className="form-label">
+            Start Date:
+          </label>
+          <CustomDatePicker 
+            value={startDateRange}
+            onChange={onstartDateRangeChange}
+            placeholder="Start date"
+            maxDate={endDateRange || getTodayDate()}
+          />
+        </div>
+        
+        <div className="formGroup">
+          <label className="form-label">
+            End Date:
+          </label>
+          <CustomDatePicker 
+            value={endDateRange}
+            onChange={onendDateRangeChange}
+            placeholder="End date"
+            minDate={startDateRange}
+          />
+        </div>
+      </div>
+      
+      <div style={{ marginTop:"19px" }}>
+        <button
+          onClick={onClear}
+          className="export-button"
+        >
+          Clear
+        </button>
+      </div>
+
+      {startDateRange && endDateRange && new Date(startDateRange) > new Date(endDateRange) && (
+        <div style={{ 
+          width: "100%", 
+          color: "#dc3545", 
+          fontSize: "12px", 
+          marginTop: "8px" 
+        }}>
+          End date cannot be before start date
+        </div>
+      )}
+    </>
+  );
+};
+
 
 const Table = ({
   columns,
   data,
-  pageSizeOptions = [5, 10, 20],
+  pageSizeOptions = [10, 15, 20],
   onEdit,
+  onApprove,
   onDelete,
   onView,
   page: controlledPage,
@@ -17,59 +126,86 @@ const Table = ({
   onPageChange,
   onPageSizeChange,
   exportable = true,
-  exportFileName = 'data'
+  exportFileName = "data",
+  expandable = false,
+  renderRowSubComponent,
+  userRoles = [],
+  actionPermissions = {},
+  loading = false,
+  searchFields = [],
+  onSearchFieldChange,
+  currentSearchField = "",
+  onSearch,
+  showDateRange = false,
+  startDateRange = "",
+  endDateRange = "",
+  onstartDateRangeChange,
+  onendDateRangeChange,
+  onDateRangeSearch,
+  showSearch = true,
+  originalData = []
 }) => {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState(null);
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortOrder, setSortOrder] = useState("asc");
   const [internalPage, setInternalPage] = useState(1);
   const [internalPageSize, setInternalPageSize] = useState(pageSizeOptions[0]);
+  const [expandedRows, setExpandedRows] = useState({});
 
   const page = controlledPage !== undefined ? controlledPage : internalPage;
-  const pageSize = controlledPageSize !== undefined ? controlledPageSize : internalPageSize;
+  const pageSize =
+    controlledPageSize !== undefined ? controlledPageSize : internalPageSize;
 
-  const filteredData = data.filter(row =>
-    columns.some(col =>
-      String(row[col.accessor] || '')
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    )
-  );
+  const isLoading = loading || data == null;
+  const safeData = Array.isArray(data) ? data : [];
+  const safeOriginalData = Array.isArray(originalData) ? originalData : safeData;
+
+  const textFilteredData = onSearch
+    ? safeData
+    : safeData.filter((row) =>
+        columns.some((col) =>
+          String(row[col.accessor] || "")
+            .toLowerCase()
+            .includes(search.toLowerCase())
+        )
+      );
+
+  const filteredData = textFilteredData;
 
   const sortedData = sortBy
     ? [...filteredData].sort((a, b) => {
-        if (a[sortBy] < b[sortBy]) return sortOrder === 'asc' ? -1 : 1;
-        if (a[sortBy] > b[sortBy]) return sortOrder === 'asc' ? 1 : -1;
+        if (a[sortBy] < b[sortBy]) return sortOrder === "asc" ? -1 : 1;
+        if (a[sortBy] > b[sortBy]) return sortOrder === "asc" ? 1 : -1;
         return 0;
       })
     : filteredData;
 
-  const paginatedData = (controlledPage !== undefined && controlledPageSize !== undefined)
+    const paginatedData = controlledPage !== undefined && controlledPageSize !== undefined
     ? sortedData 
-    : sortedData.slice((page - 1) * pageSize, page * pageSize);
-
+    : sortedData.slice((page - 1) * pageSize, page * pageSize); 
+  
   const totalRows = totalCount !== undefined ? totalCount : sortedData.length;
   const totalPages = Math.ceil(totalRows / pageSize);
 
-  const handleSort = accessor => {
+  const handleSort = (accessor) => {
     if (sortBy === accessor) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortBy(accessor);
-      setSortOrder('asc');
+      setSortOrder("asc");
     }
     if (onPageChange) onPageChange(1);
     else setInternalPage(1);
   };
 
-  const handlePageChange = newPage => {
+  const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       if (onPageChange) onPageChange(newPage);
       else setInternalPage(newPage);
     }
   };
 
-  const handlePageSizeChange = e => {
+  const handlePageSizeChange = (e) => {
     const newSize = Number(e.target.value);
     if (onPageSizeChange) onPageSizeChange(newSize);
     else {
@@ -78,30 +214,41 @@ const Table = ({
     }
   };
 
+  const toggleRowExpansion = (rowId) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [rowId]: !prev[rowId],
+    }));
+  };
+
   const exportToCSV = () => {
-    const exportData = sortedData.map(row => {
+    // Use original data for export to avoid formatted currency values
+    const exportData = safeOriginalData.map((row) => {
       const exportRow = {};
-      columns.forEach(col => {
+      columns.forEach((col) => {
+        // Export the raw numeric values instead of formatted strings
         exportRow[col.Header] = row[col.accessor];
       });
       return exportRow;
     });
 
     const csv = Papa.unparse(exportData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', `${exportFileName}.csv`);
+    link.setAttribute("download", `${exportFileName}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const exportToExcel = () => {
-    const exportData = sortedData.map(row => {
+    // Use original data for export to avoid formatted currency values
+    const exportData = safeOriginalData.map((row) => {
       const exportRow = {};
-      columns.forEach(col => {
+      columns.forEach((col) => {
+        // Export the raw numeric values instead of formatted strings
         exportRow[col.Header] = row[col.accessor];
       });
       return exportRow;
@@ -109,27 +256,102 @@ const Table = ({
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
     XLSX.writeFile(workbook, `${exportFileName}.xlsx`);
+  };
+
+  const hasPermission = (requiredPermission) => {
+    if (!requiredPermission) return true;
+    return userRoles.some((role) => requiredPermission.includes(role));
+  };
+
+  const handleDateRangeSearch = () => {
+    if (onDateRangeSearch) {
+      onDateRangeSearch();
+    }
+  };
+
+  const handleClearDateRange = () => {
+    if (onstartDateRangeChange) onstartDateRangeChange("");
+    if (onendDateRangeChange) onendDateRangeChange("");
+    if (onDateRangeSearch) onDateRangeSearch();
   };
 
   return (
     <div className="table-container">
       <div className="table-controls">
-        <div className="search-container">
-          <FiSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={e => {
-              setSearch(e.target.value);
-              if (onPageChange) onPageChange(1);
-              else setInternalPage(1);
-            }}
-            className="search-input"
+        <div
+          className="search-container"
+          style={{ display: "flex", alignItems: "center", gap: "8px" }}
+        >
+                  {showDateRange && (
+          <DateRangePicker
+            startDateRange={startDateRange}
+            endDateRange={endDateRange}
+            onstartDateRangeChange={onstartDateRangeChange}
+            onendDateRangeChange={onendDateRangeChange}
+            onSearch={handleDateRangeSearch}
+            onClear={handleClearDateRange}
           />
+        )}
+          {searchFields.length > 0 && (
+            <select
+              value={currentSearchField}
+              onChange={(e) => onSearchFieldChange?.(e.target.value)}
+              style={{
+                padding: "8px",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+                backgroundColor: "white",
+                color: "black",
+                minWidth: "150px",
+              }}
+            >
+              {searchFields.map((field) => (
+                <option key={field.value} value={field.value}>
+                  {field.label}
+                </option>
+              ))}
+            </select>
+          )}
+        {showSearch && (
+
+          <div style={{ position: "relative", flex: 1 }}>
+            <FiSearch 
+              className="search-icon" 
+              style={{
+                position: "absolute",
+                left: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#6c757d",
+                zIndex: 1,
+              }}
+            />
+            <input
+              type="text"
+              placeholder={`Search by ${currentSearchField}...`}
+              value={search}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearch(value);
+                if (onSearch) {
+                  onSearch(value);
+                } else {
+                  if (onPageChange) onPageChange(1);
+                  else setInternalPage(1);
+                }
+              }}
+              className="search-input"
+              style={{ 
+                paddingLeft: "35px",
+                width: "100%",
+              }}
+            />
+          </div>
+        )}
         </div>
+            
         <div className="export-controls">
           {exportable && (
             <div className="export-buttons">
@@ -141,13 +363,15 @@ const Table = ({
               </button>
             </div>
           )}
-          <select 
-            value={pageSize} 
+          <select
+            value={pageSize}
             onChange={handlePageSizeChange}
             className="page-size-select"
           >
-            {pageSizeOptions.map(size => (
-              <option key={size} value={size}>Show {size}</option>
+            {pageSizeOptions.map((size) => (
+              <option key={size} value={size}>
+                Show {size}
+              </option>
             ))}
           </select>
         </div>
@@ -157,23 +381,30 @@ const Table = ({
         <table className="data-table">
           <thead>
             <tr>
-              {columns.map(col => (
+              {expandable && <th className="table-header expand-header"></th>}
+              {columns.map((col) => (
                 <th
                   key={col.accessor}
                   onClick={() => handleSort(col.accessor)}
-                  className={`table-header ${sortBy === col.accessor ? 'active' : ''}`}
+                  className={`table-header ${
+                    sortBy === col.accessor ? "active" : ""
+                  }`}
                 >
                   <div className="header-content">
                     {col.Header}
                     {sortBy === col.accessor && (
                       <span className="sort-icon">
-                        {sortOrder === 'asc' ? <FiChevronUp /> : <FiChevronDown />}
+                        {sortOrder === "asc" ? (
+                          <FiChevronUp />
+                        ) : (
+                          <FiChevronDown />
+                        )}
                       </span>
                     )}
                   </div>
                 </th>
               ))}
-              {(onView || onEdit || onDelete) && (
+              {(onView || onApprove || onEdit || onDelete) && (
                 <th className="table-header">Actions</th>
               )}
             </tr>
@@ -181,43 +412,100 @@ const Table = ({
           <tbody>
             {paginatedData.length === 0 ? (
               <tr className="empty-row">
-                <td colSpan={columns.length + 1}>
+                <td colSpan={columns.length + 1 + (expandable ? 1 : 0)}>
                   <div className="empty-state">
-                    No data found
+                    {isLoading ? "Loading data…" : "No data found"}
                   </div>
                 </td>
               </tr>
             ) : (
-              paginatedData.map((row, idx) => (
-                <tr key={idx} className="table-row">
-                  {columns.map(col => (
-                    <td key={col.accessor} className="table-cell">
-                      {row[col.accessor]}
-                    </td>
-                  ))}
-                  {(onView || onEdit || onDelete) && (
-                    <td className="table-cell actions-cell">
-                      <div className="action-buttons">
-                        {onView && (
-                          <button className="action-btn view-btn" onClick={() => onView(row)} title="View">
-                            <FiEye className="action-icon" />
-                          </button>
-                        )}
-                        {onEdit && (
-                          <button className="action-btn edit-btn" onClick={() => onEdit(row)} title="Edit">
-                            <FiEdit2 className="action-icon" />
-                          </button>
-                        )}
-                        {onDelete && (
-                          <button className="action-btn delete-btn" onClick={() => onDelete(row)} title="Delete">
-                            <FiTrash2 className="action-icon" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))
+              paginatedData.map((row, idx) => {
+                const computedRowId = (row && (row.id ?? row._id ?? row.uuid ?? row.ID)) ?? ((page - 1) * pageSize + idx);
+                const isExpanded = expandedRows[computedRowId] || false;
+                const hasSubComponent = expandable && renderRowSubComponent;
+
+                return (
+                  <React.Fragment key={computedRowId}>
+                    <tr className={`table-row ${isExpanded ? "expanded" : ""}`}>
+                      {expandable && (
+                        <td className="table-cell expand-cell">
+                          {hasSubComponent && (
+                            <button
+                              className="expand-button"
+                              onClick={() => toggleRowExpansion(computedRowId)}
+                              aria-expanded={isExpanded}
+                            >
+                              {isExpanded ? (
+                                <FiChevronDown />
+                              ) : (
+                                <FiChevronRight />
+                              )}
+                            </button>
+                          )}
+                        </td>
+                      )}
+                      {columns.map((col) => (
+                        <td key={col.accessor} className="table-cell">
+                          {row[col.accessor]}
+                        </td>
+                      ))}
+                      {(onView || onApprove || onEdit || onDelete) && (
+                        <td className="table-cell actions-cell">
+                          <div className="action-buttons">
+                            {onView &&
+                              hasPermission(actionPermissions.view) && (
+                                <button
+                                  className="action-btn view-btn"
+                                  onClick={() => onView(row)}
+                                  title="View"
+                                >
+                                  <FiEye className="action-icon" />
+                                </button>
+                              )}
+                            {onApprove &&
+                              hasPermission(actionPermissions.approve) && (
+                                <button
+                                  className="action-btn approve-btn"
+                                  onClick={() => onApprove(row)}
+                                  title="Approve"
+                                >
+                                  <FiCheckCircle className="action-icon" />
+                                </button>
+                              )}
+                            {onEdit &&
+                              hasPermission(actionPermissions.edit) && (
+                                <button
+                                  className="action-btn edit-btn"
+                                  onClick={() => onEdit(row)}
+                                  title="Edit"
+                                >
+                                  <FiEdit2 className="action-icon" />
+                                </button>
+                              )}
+                            {onDelete &&
+                              hasPermission(actionPermissions.delete) && (
+                                <button
+                                  className="action-btn delete-btn"
+                                  onClick={() => onDelete(row)}
+                                  title="Delete"
+                                >
+                                  <FiTrash2 className="action-icon" />
+                                </button>
+                              )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                    {hasSubComponent && isExpanded && (
+                      <tr className="expanded-content-row">
+                        <td colSpan={columns.length + 1 + (expandable ? 1 : 0)}>
+                          {renderRowSubComponent({ row })}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -225,18 +513,23 @@ const Table = ({
 
       <div className="table-footer">
         <div className="pagination-info">
-          Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalRows)} of {totalRows} entries
+          {isLoading
+            ? "Loading…"
+            : `Showing ${(page - 1) * pageSize + 1} to ${Math.min(
+                page * pageSize,
+                totalRows
+              )} of ${totalRows} entries`}
         </div>
         <div className="pagination-buttons">
-          <button 
-            onClick={() => handlePageChange(page - 1)} 
-            disabled={page === 1}
+          <button
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page === 1 || isLoading}
             className="pagination-button"
           >
             Previous
           </button>
           <div className="page-numbers">
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            {Array.from({ length: Math.min(10, totalPages) }, (_, i) => {
               let pageNum;
               if (totalPages <= 5) {
                 pageNum = i + 1;
@@ -251,7 +544,10 @@ const Table = ({
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
-                  className={`pagination-button ${page === pageNum ? 'active' : ''}`}
+                  disabled={isLoading}
+                  className={`pagination-button ${
+                    page === pageNum ? "active" : ""
+                  }`}
                 >
                   {pageNum}
                 </button>
@@ -263,15 +559,18 @@ const Table = ({
             {totalPages > 5 && page < totalPages - 2 && (
               <button
                 onClick={() => handlePageChange(totalPages)}
-                className={`pagination-button ${page === totalPages ? 'active' : ''}`}
+                disabled={isLoading}
+                className={`pagination-button ${
+                  page === totalPages ? "active" : ""
+                }`}
               >
                 {totalPages}
               </button>
             )}
           </div>
-          <button 
-            onClick={() => handlePageChange(page + 1)} 
-            disabled={page === totalPages}
+          <button
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page === totalPages || isLoading}
             className="pagination-button"
           >
             Next

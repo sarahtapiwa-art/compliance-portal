@@ -6,17 +6,18 @@ import Table from '../../_components/Table';
 import Notification from '../../_components/Notifications/page'
 import CreateForm from '../../_components/CreateForm/page';
 import '../../globals.css';
+import BulkUpload from '../../_components/BulkUpload';
 
 const columns = [
   { Header: 'Title', accessor: 'title' },
   { Header: 'Regulatory Body', accessor: 'regulatoryBody' },
-  { Header: 'Email', accessor: 'regulatoryEmail' },
+  { Header: 'Recipient Email', accessor: 'regulatoryEmail' },
   { Header: 'Frequency', accessor: 'frequency' },
-  { Header: 'Deadline', accessor: 'submissionDeadline' },
-  { Header: 'Department', accessor: 'responsibleDepartment' },
+  { Header: 'Deadline', accessor: (row) => new Date(row.submissionDeadline).toLocaleDateString() },
+  { Header: 'Department', accessor: (row) => row.department.departmentName },
 ];
 
-const FREQUENCY_OPTIONS = ["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"].map(l => ({
+const FREQUENCY_OPTIONS = ["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY","SEMI_ANNUAL", "YEARLY"].map(l => ({
   label: l.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()),
   value: l
 }));
@@ -39,6 +40,7 @@ const ReturnDefinitionPage = () => {
   const [departments, setDepartments] = useState([]);
   const [formValues, setFormValues] = useState({});
   const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   const router = useRouter();
 
@@ -58,12 +60,7 @@ const ReturnDefinitionPage = () => {
         label: s.departmentName
       }))
     },
-    // { 
-    //   label: 'Responsible Person', 
-    //   name: 'responsiblePerson', 
-    //   required: true,
-    //   readOnly: true
-    // },    
+  
     { label: 'Description', name: 'description', required: true, type: 'textarea' },  
   ];
 
@@ -94,7 +91,6 @@ const ReturnDefinitionPage = () => {
           responsibleDepartment: department ? department.departmentName : 'Unknown'
         };
       });
-      console.log(enhancedData)
       setData(enhancedData);
     } catch (err) {
       setError(err.message);
@@ -126,9 +122,32 @@ const ReturnDefinitionPage = () => {
       ...completeDefinition,
       responsiblePerson: department ? department.contactPerson : ''
     });
-    console.log(department)
     setSelectedDepartment(department);
     setShowForm(true);
+  };
+
+  const handleBulkUploadSuccess = () => {
+    setSuccessMessage('Bulk upload completed successfully!');
+    setShowBulkUpload(false);
+    setShowSuccessNotification(true);
+    setTimeout(() => setShowSuccessNotification(false), 10000);
+    fetchData();
+  };
+
+  const handleBulkUploadError = (errorMsg) => {
+    setError(`Bulk upload failed: ${errorMsg}`);
+    setShowNotification(true);
+  };
+
+  const handleView = async (row) => {
+    try {
+      const response = await apiClient.get(`/api/v1/stands/${row.id}`);
+      setStandDetails(response.content || response); 
+      setShowStandDetails(true);
+    } catch (err) {
+      setError(err.message);
+      setShowNotification(true);
+    }
   };
 
   const handleDelete = async (row) => {
@@ -226,7 +245,7 @@ const ReturnDefinitionPage = () => {
   };
 
   const tableData = data.map(row => {
-    const newRow = { id: row.id }; // Preserve the ID
+    const newRow = { id: row.id }; 
     columns.forEach(col => {
       const key = typeof col.accessor === 'function' ? col.Header : col.accessor;
       newRow[key] = getCellValue(row, col.accessor);
@@ -253,6 +272,12 @@ const ReturnDefinitionPage = () => {
         >
           Add Return Definition
         </button>
+        <button
+            onClick={() => setShowBulkUpload(true)}
+            className="create-button"
+          >
+            Bulk Upload
+          </button>
       </div>
       
       {showForm && (
@@ -271,13 +296,17 @@ const ReturnDefinitionPage = () => {
         />
       )}
 
-      {showNotification && error && (
-        <Notification
-          message={`Error: ${error}`}
-          type="error"
-          onClose={() => setShowNotification(false)}
-        />
-      )}
+{showBulkUpload && (
+          <BulkUpload
+            endpoint="/api/v1/return-definition/bulk/attach/upload"
+            onSuccess={handleBulkUploadSuccess}
+            onError={handleBulkUploadError}
+            onCancel={() => setShowBulkUpload(false)}
+            title="Bulk Upload "
+          />
+        )}
+
+
       
       {showSuccessNotification && successMessage && (
         <Notification
@@ -288,9 +317,8 @@ const ReturnDefinitionPage = () => {
         />
       )}
       
-      {loading ? (
-        <div className="loading">Loading...</div>
-      ) : (
+
+   
         <Table 
           exportFileName="return_definition" 
           columns={tableColumns} 
@@ -298,7 +326,6 @@ const ReturnDefinitionPage = () => {
           onEdit={handleEdit} 
           onDelete={handleDelete} 
         />
-      )}
     </div>
   );
 };

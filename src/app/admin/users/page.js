@@ -20,7 +20,7 @@ const getCellValue = (row, accessor) => {
   return '';
 };
 
-const ROLE_OPTIONS = ["SUPER_SYSTEM_ADMIN","ADMIN","USER"].map(l => ({
+const ROLE_OPTIONS = ["ADMIN","USER"].map(l => ({
     label: l.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()),
     value: l
   }));
@@ -64,15 +64,6 @@ const UserPage = () => {
     }, []);
 
 
-
-    const handleEdit = (row) => {
-      if (!row.id) {
-        return; 
-      }
-      const completeProduct = data.find(product => product.id === row.id);
-      seteditUser(completeProduct);
-      setShowForm(true);
-    };
 
   const handleFormSubmit = async (formData) => {
     try {

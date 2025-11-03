@@ -6,17 +6,12 @@ import { useEffect, useState } from "react";
 import { 
   FiHome, 
   FiUsers, 
-  FiFolder, 
   FiChevronRight,
-  FiBook,
-  FiDollarSign,
-  FiFile,
   FiX,
   FiMenu,
   FiBell,
   FiChevronDown,
   FiChevronUp,
-  FiUserX,
   FiGrid,
   FiCalendar,
   FiFileText,
@@ -30,13 +25,6 @@ import {jwtDecode} from 'jwt-decode';
 const adminItems = [
   { name: "Dashboard", href: "/dashboard", icon: FiHome },
 
-//   { 
-//     name: "Payments", icon: FiDollarSign,
-//     subItems: [
-//       { name: "Transactions", href: "/admin/payments" },
-//       { name: "Proof of Payments", href: "/admin/proof-of-payments" }
-//     ]
-//   },
 ];
 
 const userItems = [
@@ -69,7 +57,6 @@ export default function SideNav() {
         const role = decoded.roles?.[0];
         setUserRole(role);
       } catch (err) {
-        // console.error('Invalid token:', err);
       }
     }
   }, []);
