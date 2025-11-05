@@ -4,16 +4,16 @@ import { useRouter, useParams } from 'next/navigation';
 import { apiClient } from '../../../_utils/apiClient';
 import Notification from '../../../_components/Notifications/page';
 import '../../../globals.css';
-import { 
-  FiArrowLeft, 
-  FiPackage, 
+import {
+  FiArrowLeft,
+  FiPackage,
   FiClock,
   FiPaperclip,
   FiCheckCircle,
   FiSend,
   FiEye,
   FiDownload,
-FiFile
+  FiFile, FiExternalLink
 } from 'react-icons/fi';
 import '../../../../styles/Submissions.css';
 
@@ -29,6 +29,7 @@ const SubmissionViewPage = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [attachedFile, setAttachedFile] = useState(null);
+  const [documentUrl, setDocumentUrl] = useState(null);
   const [emailCredentials, setEmailCredentials] = useState({
     username: '',
     password: '',
@@ -42,6 +43,7 @@ const SubmissionViewPage = () => {
   const [verifying, setVerifying] = useState(false);
   const [viewingFile, setViewingFile] = useState(null);
   const [documentId, setDocumentId] = useState();
+  const [fileType, setFileType] = useState(null); // 'pdf', 'image', 'unknown'
 
   const isSubmitted = submission?.status === 'SUBMITTED' || submission?.status === 'CLOSED';
   const hasFiles = submission?.status === 'UPLOADED';
@@ -238,29 +240,82 @@ const SubmissionViewPage = () => {
   };
 
   const viewFile = async () => {
-    console.log("📌 viewFile() triggered");
     try {
       const id = submission?.returnDefinition?.documentId;
       if (!id) return;
-  
-      const response = await apiClient.get(
-        `/api/v1/documents/${id}/view`,
-        { responseType: 'arraybuffer' } // ✅ REQUIRED
-      );
-    
-      const blob = new Blob([response]);
+
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      if (!token) throw new Error("Missing authentication token");
+
+      const response = await fetch(`http://192.168.3.88:18000/api/v1/documents/${id}/view`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Get content type from response headers
+      const contentType = response.headers.get('content-type') || '';
+      const contentDisposition = response.headers.get('content-disposition') || '';
+
+      console.log('Content-Type:', contentType);
+      console.log('Content-Disposition:', contentDisposition);
+
+      const fileData = await response.arrayBuffer();
+
+      if (!fileData || fileData.byteLength === 0) {
+        throw new Error("Received empty file data");
+      }
+
+      // Determine file type and create appropriate blob
+      let fileType = 'application/octet-stream';
+      let isImage = false;
+      let isPdf = false;
+
+      if (contentType.includes('pdf')) {
+        fileType = 'application/pdf';
+        isPdf = true;
+      } else if (contentType.includes('image')) {
+        fileType = contentType;
+        isImage = true;
+      } else {
+        // Fallback: try to determine from filename in content-disposition
+        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+        if (filenameMatch) {
+          const filename = filenameMatch[1].toLowerCase();
+          if (filename.endsWith('.pdf')) {
+            fileType = 'application/pdf';
+            isPdf = true;
+          } else if (filename.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/)) {
+            fileType = `image/${filename.split('.').pop()}`;
+            isImage = true;
+          }
+        }
+      }
+
+      const blob = new Blob([fileData], { type: fileType });
       const blobUrl = URL.createObjectURL(blob);
-  
-      console.log("✅ Document URL:", blobUrl);
-      setViewingFile({ url: blobUrl});
+
+      console.log('File type detected:', { fileType, isImage, isPdf });
+      console.log('Blob URL created:', blobUrl);
+
+      // Set state with file info
+      setViewingFile(blobUrl);
+      setDocumentUrl(blobUrl);
+      setFileType(isPdf ? 'pdf' : isImage ? 'image' : 'unknown');
+
     } catch (err) {
-      console.log(err);
-      setError('Failed to view file');
+      console.error("Failed to load file:", err);
+      setError(`Failed to view file: ${err.message}`);
       setShowNotification(true);
+      setViewingFile(null);
+      setFileType(null);
     }
   };
-  
-
   const downloadFile = async (fileId, fileName) => {
     try {
       const file = submission.files.find(f => f.id === fileId);
@@ -519,33 +574,111 @@ const SubmissionViewPage = () => {
           </p>
 
           <div className='stand-container'>
-          {viewingFile ? (
-  viewingFile.type.includes('pdf') ? (
-    <iframe
-      src={viewingFile.url}
-      className="document-iframe"
-      title="Document Viewer"
-      width="100%"
-      height="600px"
-    />
-  ) : viewingFile.type.startsWith('image/') ? (
-    <img
-      src={viewingFile.url}
-      alt="Uploaded Document"
-      style={{ width: '100%', maxHeight: '600px', objectFit: 'contain' }}
-    />
-  ) : (
-    <p>Unsupported file format</p>
-  )
-) : (
-  <div className="no-document">
-    <FiFile size={48} style={{ color: '#bdc3c7', marginBottom: '1rem' }} />
-    <h3>Document not available</h3>
-    <p>Unable to load the document for preview.</p>
-  </div>
-)}
+            {viewingFile ? (
+                <div className="file-preview-container">
+                  {fileType === 'pdf' ? (
+                      // PDF Viewer
+                      <div className="pdf-viewer">
+                        <iframe
+                            src={`${viewingFile}#view=fitH`}
+                            title="PDF Document Viewer"
+                            width="100%"
+                            height="600px"
+                            style={{ border: '1px solid #ddd', borderRadius: '4px' }}
+                            onLoad={() => console.log('PDF loaded successfully')}
+                            onError={() => {
+                              console.error('PDF failed to load');
+                              setError('Failed to display PDF document');
+                            }}
+                        />
+                      </div>
+                  ) : fileType === 'image' ? (
+                      // Image Viewer
+                      <div className="image-viewer">
+                        <img
+                            src={viewingFile}
+                            alt="Document Preview"
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '600px',
+                              display: 'block',
+                              margin: '0 auto',
+                              borderRadius: '4px',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                            }}
+                            onLoad={() => console.log('Image loaded successfully')}
+                            onError={() => {
+                              console.error('Image failed to load');
+                              setError('Failed to display image');
+                            }}
+                        />
+                      </div>
+                  ) : (
+                      // Fallback for unknown file types
+                      <div className="unknown-file-type">
+                        <FiFile size={48} style={{ color: '#e74c3c', marginBottom: '1rem' }} />
+                        <h3>Unsupported File Type</h3>
+                        <p>This file type cannot be previewed.</p>
+                        <a
+                            href={viewingFile}
+                            download
+                            className="download-button"
+                        >
+                          Download File
+                        </a>
+                      </div>
+                  )}
 
-        </div>
+                  {/* Common actions for all file types */}
+                  <div className="viewer-actions" style={{ marginTop: '1rem', padding: '0.5rem' }}>
+                    <a
+                        href={viewingFile}
+                        download="document"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary"
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#3498db',
+                          color: 'white',
+                          textDecoration: 'none',
+                          borderRadius: '4px',
+                          display: 'inline-block'
+                        }}
+                    >
+                      <FiDownload style={{ marginRight: '0.5rem' }} />
+                      Download
+                    </a>
+
+                    <button
+                        onClick={() => window.open(viewingFile, '_blank')}
+                        className="btn btn-secondary"
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#95a5a6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          marginLeft: '0.5rem',
+                          cursor: 'pointer'
+                        }}
+                    >
+                      <FiExternalLink style={{ marginRight: '0.5rem' }} />
+                      Open in New Tab
+                    </button>
+                  </div>
+                </div>
+            ) : (
+                // No document available
+                <div className="no-document">
+                  <FiFile size={48} style={{ color: '#bdc3c7', marginBottom: '1rem' }} />
+                  <h3>Document not available</h3>
+                  <p>Unable to load the document for preview.</p>
+                </div>
+            )}
+
+
+          </div>
         </div>
       )}
 

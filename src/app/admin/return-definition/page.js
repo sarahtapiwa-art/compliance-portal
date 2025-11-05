@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../_utils/apiClient';
 import Table from '../../_components/Table';
@@ -43,6 +43,53 @@ const ReturnDefinitionPage = () => {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   const router = useRouter();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
+
+  const fetchData = useCallback(async (requestedPage = page, requestedPageSize = pageSize, search = "", searchField = "") => {
+    setLoading(true);
+    setError(null);
+    try {
+      const apiPage = Math.max(0, Number(requestedPage) - 1);
+      const apiSize = Number(requestedPageSize);
+
+      const params = new URLSearchParams({
+        page: apiPage.toString(),
+        size: apiSize.toString()
+      });
+
+      if (search && searchField) {
+        params.append('search', search);
+        params.append('searchField', searchField);
+      }
+
+      const res = await apiClient.get(`/api/v1/return-definition?${params.toString()}`);
+      const enhancedData = (res.content || []).map(item => {
+        const department = departments.find(dept => dept.id === item.responsibleDepartmentId);
+        return {
+          ...item,
+          responsiblePerson: department ? department.contactPerson : 'Not assigned',
+          responsibleDepartment: department ? department.departmentName : 'Unknown'
+        };
+      });
+      setData(enhancedData);
+
+      const total = res?.page?.totalElements || res?.totalElements || res?.total;
+      setTotalElements(typeof total === 'number' ? total : (res?.content || []).length);
+
+    } catch (err) {
+      setError(err.message);
+      setShowNotification(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    fetchData(page, pageSize);
+  }, [page, pageSize, fetchData]);
+
 
   const getFields = () => [
     { label: 'Report Title', name: 'title', required: true },
@@ -78,33 +125,7 @@ const ReturnDefinitionPage = () => {
     fetchDepartments();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiClient.get(`/api/v1/return-definition`);
-            const enhancedData = (res.content || []).map(item => {
-        const department = departments.find(dept => dept.id === item.responsibleDepartmentId);
-        return {
-          ...item,
-          responsiblePerson: department ? department.contactPerson : 'Not assigned',
-          responsibleDepartment: department ? department.departmentName : 'Unknown'
-        };
-      });
-      setData(enhancedData);
-    } catch (err) {
-      setError(err.message);
-      setShowNotification(true);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    if (departments.length > 0) {
-      fetchData();
-    }
-  }, [departments]);
 
   const handleEdit = (row) => {
     if (!row.id) {
@@ -272,12 +293,12 @@ const ReturnDefinitionPage = () => {
         >
           Add Return Definition
         </button>
-        <button
-            onClick={() => setShowBulkUpload(true)}
-            className="create-button"
-          >
-            Bulk Upload
-          </button>
+        {/*<button*/}
+        {/*    onClick={() => setShowBulkUpload(true)}*/}
+        {/*    className="create-button"*/}
+        {/*  >*/}
+        {/*    Bulk Upload*/}
+        {/*  </button>*/}
       </div>
       
       {showForm && (
@@ -316,16 +337,32 @@ const ReturnDefinitionPage = () => {
           duration={10000}
         />
       )}
-      
 
-   
-        <Table 
-          exportFileName="return_definition" 
-          columns={tableColumns} 
-          data={tableData} 
-          onEdit={handleEdit} 
-          onDelete={handleDelete} 
-        />
+
+
+
+      <Table
+          exportFileName="return_definition"
+          columns={tableColumns}
+          data={tableData}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalElements}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            fetchData(newPage, pageSize);
+          }}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+            fetchData(1, newSize);
+          }}
+          loading={loading}
+      />
+
+
     </div>
   );
 };
