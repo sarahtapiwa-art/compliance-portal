@@ -154,6 +154,19 @@ getAccessToken(userToken = null) {
         headers: mergedHeaders,
       });
     }
+
+    patch(endpoint, body = {}, headers = {}) {
+        const mergedHeaders = {
+            ...this.getHeaders(),
+            ...headers
+        };
+        return this.request(endpoint, {
+            method: 'PATCH',
+            body,
+            headers: mergedHeaders,
+        });
+    }
+
   
     delete(endpoint, headers = {}) {
       const mergedHeaders = {

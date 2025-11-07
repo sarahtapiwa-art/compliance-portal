@@ -16,13 +16,15 @@ import {
   FiFile, FiExternalLink
 } from 'react-icons/fi';
 import '../../../../styles/Submissions.css';
+import {jwtDecode} from "jwt-decode";
 
 const SubmissionViewPage = () => {
   const router = useRouter();
   const params = useParams();
   const submissionId = params.id;
-  
+
   const [submission, setSubmission] = useState(null);
+  const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showNotification, setShowNotification] = useState(false);
@@ -41,16 +43,17 @@ const SubmissionViewPage = () => {
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const [viewingFile, setViewingFile] = useState(null);
   const [documentId, setDocumentId] = useState();
   const [fileType, setFileType] = useState(null); // 'pdf', 'image', 'unknown'
 
   const isSubmitted = submission?.status === 'SUBMITTED' || submission?.status === 'CLOSED';
   const hasFiles = submission?.status === 'UPLOADED';
-  const hasApprovedFile = submission?.files?.some(file => file.status === 'APPROVED');
+  const hasApprovedFile = document?.status === 'VERIFIED';
   const hasPendingFile = submission?.files?.some(file => file.status === 'PENDING');
-
-
+  const [userRole, setUserRole] = useState('');
+  const [decodedToken, setDecodedToken] = useState(null);
 
   const fetchSubmission = async () => {
     setLoading(true);
@@ -61,6 +64,21 @@ const SubmissionViewPage = () => {
       setAttachingPersonEmail(res.returnDefinition.department.responsiblePersonEmail || '');
       const id = res.returnDefinition.documentId
       setDocumentId(id)
+      // Fetching Document
+      if (id){
+          try {
+            const res = await apiClient.get(`/api/v1/documents/${id}`);
+            setDocument(res);
+
+          } catch (err) {
+            setError(err.message);
+            setShowNotification(true);
+          } finally {
+            setLoading(false);
+          }
+
+      }
+
     } catch (err) {
       setError(err.message);
       setShowNotification(true);
@@ -68,6 +86,29 @@ const SubmissionViewPage = () => {
       setLoading(false);
     }
   };
+
+
+
+  const fetchData = async () => {
+    try {
+      const response = await apiClient.getAccessToken();
+      if (response) {
+        const tokenData = jwtDecode(response);
+        setDecodedToken(tokenData);
+        setUserRole(tokenData?.roles[0])
+        console.log('Decoded Token: ', tokenData);
+
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    return () => {
+    };
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -82,7 +123,8 @@ const SubmissionViewPage = () => {
       viewFile();
     }
   }, [submission]);
-  
+
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -119,7 +161,7 @@ const SubmissionViewPage = () => {
       setSuccessMessage('File attached successfully! Waiting for verification.');
       setShowSuccessNotification(true);
       setAttachedFile(null);
-      document.getElementById('file-input').value = '';
+      // document.getElementById('file-input').value = '';
       
       await fetchSubmission();
     } catch (err) {
@@ -130,6 +172,46 @@ const SubmissionViewPage = () => {
     }
   };
 
+  const handleVerifyDocument = async (documentId, approve) => {
+    setVerifying(true);
+    setError(null);
+
+    try {
+      const endpoint =  `/api/v1/documents/${documentId}?documentStatus=${approve}`;
+
+      await apiClient.patch(endpoint,{});
+
+      setSuccessMessage(`File ${approve ? 'approved' : 'rejected'} successfully!`);
+      setShowSuccessNotification(true);
+
+      await fetchSubmission();
+    } catch (err) {
+      setError(err.message || `Failed to ${approve ? 'approve' : 'reject'} file`);
+      setShowNotification(true);
+    } finally {
+      setVerifying(false);
+    }
+  };
+  const handleRejectDocument = async (documentId, approve) => {
+    setRejecting(true);
+    setError(null);
+
+    try {
+      const endpoint =  `/api/v1/documents/${documentId}?documentStatus=${approve}`;
+
+      await apiClient.patch(endpoint,{});
+
+      setSuccessMessage(`File ${approve ? 'approved' : 'rejected'} successfully!`);
+      setShowSuccessNotification(true);
+
+      await fetchSubmission();
+    } catch (err) {
+      setError(err.message || `Failed to ${approve ? 'approve' : 'reject'} file`);
+      setShowNotification(true);
+    } finally {
+      setRejecting(false);
+    }
+  };
   const handleVerifyFile = async (fileId, approve = true) => {
     setVerifying(true);
     setError(null);
@@ -502,78 +584,42 @@ const SubmissionViewPage = () => {
       )}
 
       {/* File Verification Section - Show when files exist but none are approved */}
-      {hasFiles && !hasApprovedFile && !isSubmitted && (
+      {hasFiles && !hasApprovedFile && !isSubmitted && userRole === 'ROLE_ADMIN' && (
         <div className="action-card">
           <div className="action-header">
             <FiEye className="action-icon" />
             <h3>Verify Attached Files</h3>
           </div>
-          
-          <div className="files-list">
-            {/* {submission.files.map((file) => (
-              <div key={file.id} className="file-item">
-                <div className="file-info">
-                  <div className="file-name">{file.fileName}</div>
-                  <div className={`file-status status-${file.status.toLowerCase()}`}>
-                    {file.status}
-                  </div>
-                  <div className="file-uploaded">
-                    Uploaded: {formatDate(file.uploadedAt)}
-                  </div>
-                  {file.documentId && (
-                    <div className="file-document-id">
-                      Document ID: {file.documentId}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="file-actions">
-                  <button
-                    onClick={() => viewFile(file.id, file.fileName)}
-                    disabled={viewingFile === file.id || !file.documentId}
-                    className="action-button secondary"
-                    title="View File"
-                  >
-                    {viewingFile === file.id ? 'Opening...' : <FiEye />}
-                  </button>
-                  
-                  <button
-                    onClick={() => downloadFile(file.id, file.fileName)}
-                    className="action-button secondary"
-                    title="Download File"
-                    disabled={!file.documentId}
-                  >
-                    <FiDownload />
-                  </button>
-                  
-                  {file.status === 'PENDING' && (
-                    <>
-                      <button
-                        onClick={() => handleVerifyFile(file.id, true)}
-                        disabled={verifying}
-                        className="action-button success"
-                      >
-                        {verifying ? 'Verifying...' : 'Approve'}
-                      </button>
-                      <button
-                        onClick={() => handleVerifyFile(file.id, false)}
-                        disabled={verifying}
-                        className="action-button danger"
-                      >
-                        {verifying ? 'Verifying...' : 'Reject'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))} */}
-          </div>
+
+
           
           <p className="action-description">
             Please review and verify the attached files before proceeding with submission.
           </p>
 
           <div className='stand-container'>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+
+              <a
+                  href={viewingFile}
+                  download="document"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#006834',
+                    color: 'white',
+                    textDecoration: 'none',
+                    borderRadius: '4px',
+                    display: 'inline-block',
+                  }}
+              >
+                <FiDownload style={{ marginRight: '0.5rem' }} />
+                Download
+              </a>
+            </div>
+
             {viewingFile ? (
                 <div className="file-preview-container">
                   {fileType === 'pdf' ? (
@@ -631,41 +677,47 @@ const SubmissionViewPage = () => {
 
                   {/* Common actions for all file types */}
                   <div className="viewer-actions" style={{ marginTop: '1rem', padding: '0.5rem' }}>
-                    <a
-                        href={viewingFile}
-                        download="document"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-primary"
-                        style={{
-                          padding: '0.5rem 1rem',
-                          backgroundColor: '#3498db',
-                          color: 'white',
-                          textDecoration: 'none',
-                          borderRadius: '4px',
-                          display: 'inline-block'
-                        }}
-                    >
-                      <FiDownload style={{ marginRight: '0.5rem' }} />
-                      Download
-                    </a>
 
-                    <button
-                        onClick={() => window.open(viewingFile, '_blank')}
-                        className="btn btn-secondary"
-                        style={{
-                          padding: '0.5rem 1rem',
-                          backgroundColor: '#95a5a6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          marginLeft: '0.5rem',
-                          cursor: 'pointer'
-                        }}
-                    >
-                      <FiExternalLink style={{ marginRight: '0.5rem' }} />
-                      Open in New Tab
-                    </button>
+
+
+                    {document.status === 'PENDING_VERIFICATION' && (
+                        <>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                              onClick={() => handleVerifyDocument(document.id, 'VERIFIED')}
+                              disabled={verifying}
+                              className="action-button success"
+                              style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: '#006834',
+                                color: 'white',
+                                textDecoration: 'none',
+                                borderRadius: '4px',
+                                display: 'inline-block',
+                                marginRight: '0.5rem' // Add right margin
+                              }}
+                          >
+                            {verifying ? 'Verifying...' : 'Approve'}
+                          </button>
+                          <button
+                              onClick={() => handleRejectDocument(document.id, 'REJECTED')}
+                              disabled={rejecting}
+                              className="action-button danger"
+                              style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: '#dc3545', // Changed to red for reject button
+                                color: 'white',
+                                textDecoration: 'none',
+                                borderRadius: '4px',
+                                display: 'inline-block',
+                                marginLeft: '0.5rem' // Add left margin
+                              }}
+                          >
+                            {rejecting ? 'Rejecting...' : 'Reject'}
+                          </button>
+                        </div>
+                        </>
+                    )}
                   </div>
                 </div>
             ) : (
@@ -683,7 +735,7 @@ const SubmissionViewPage = () => {
       )}
 
       {/* Send Submission Section - Show only when there's an approved file */}
-      {hasApprovedFile && !isSubmitted && (
+      {hasApprovedFile && !isSubmitted &&  (
         <div className="action-card">
           <div className="action-header">
             <FiSend className="action-icon" />
@@ -786,6 +838,14 @@ const SubmissionViewPage = () => {
           <button
             onClick={handleSendSubmission}
             disabled={sending}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#006834',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '4px',
+              display: 'inline-block'
+            }}
             className={`action-button primary ${sending ? 'loading' : ''}`}
           >
             {sending ? 'Sending...' : 'Send Submission'}

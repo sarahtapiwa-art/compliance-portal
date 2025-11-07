@@ -69,7 +69,7 @@ export default function Dashboard() {
   const handleMetricClick = (type) => {
     if (type === 'total') return goTo('/admin/submissions');
     if (type === 'completed') return goTo('/admin/submissions?status=completed');
-    if (type === 'overdue') return goTo('/admin/submissions?status=overdue');
+    if (type === 'overdue') return goTo('/admin/submissions?status=OVERDUE');
     if (type === 'upcoming') return goTo(`/admin/submissions?dueWithin=${days}`);
   };
 

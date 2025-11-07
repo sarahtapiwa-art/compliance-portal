@@ -25,12 +25,7 @@ const ROLE_OPTIONS = ["ADMIN","USER"].map(l => ({
     value: l
   }));
 
-const fields = [
-    { label: 'Username', name: 'username', required: true },
-    { label: 'Email', name: 'email', required: true},
-    { label: 'Password', name: 'password', required: true},
-    { label: 'Roles', name: 'roles', required: true, type: 'select', options: ROLE_OPTIONS },  
-  ];
+
 
 
 
@@ -39,6 +34,9 @@ const UserPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [departments, setDepartments] = useState([]);
+
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [editUser, seteditUser] = useState(null);
   const [showNotification, setShowNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -62,17 +60,53 @@ const UserPage = () => {
     useEffect(() => {
       fetchData();
     }, []);
-
+  const getFields = () =>[
+    { label: 'Username', name: 'username', required: true },
+    { label: 'Email', name: 'email', required: true},
+    { label: 'Password', name: 'password', required: true},
+    { label: 'Roles', name: 'roles', required: true, type: 'select', options: ROLE_OPTIONS },
+    {
+      label: 'Department',
+      name: 'responsibleDepartmentId',
+      required: true,
+      type: 'select',
+      options: departments.map(s => ({
+        value: s.id,
+        label: s.departmentName
+      }))
+    },
+  ];
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await apiClient.getDepartments();
+        setDepartments(res.content || []);
+      } catch (err) {
+        setDepartments([]);
+        setError(err.message);
+        setShowNotification(true);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
 
   const handleFormSubmit = async (formData) => {
     try {
       if (editUser) {
-        if (!editUser.id) return; 
-        await apiClient.put(`/api/auth/register/${editUser.id}`, formData);
+        if (!editUser.id) return;
+        const payload = {
+          ...formData,
+          roles: Array.isArray(formData.roles) ? formData.roles : [formData.roles]
+        }
+        await apiClient.put(`/api/auth/register/${editUser.id}`, payload);
         setSuccessMessage('User updated successfully.');
       } else {
-        const res = await apiClient.post(`/api/auth/register`,formData);
+        const payload = {
+          ...formData,
+          roles: Array.isArray(formData.roles) ? formData.roles : [formData.roles]
+        }
+        const res = await apiClient.post(`/api/auth/register?departmentId=${formData.responsibleDepartmentId}`,payload);
         setSuccessMessage('User created successfully.');
       }
       setShowForm(false);
@@ -86,7 +120,19 @@ const UserPage = () => {
     }
   };
 
+  const handleDepartmentChange = (e) => {
+    const deptId = e.target.value;
+    const department = departments.find(d => d.id === parseInt(deptId));
+    setSelectedDepartment(department);
 
+    if (department) {
+      setFormValues(prev => ({
+        ...prev,
+        responsibleDepartmentId: deptId,
+        responsiblePerson: department.contactPerson
+      }));
+    }
+  };
 
   const tableData = data.map(row => {
     const newRow = { ...row }; 
@@ -116,11 +162,14 @@ const UserPage = () => {
         {showForm && (
           <CreateForm
             title={editUser ? "Update User" : "Add User"}
-            fields={fields}
+            fields={getFields()}
             onSubmit={handleFormSubmit}
             buttonLabel={editUser ? "Update User" : "Create User"}
             onCancel={() => { setShowForm(false); seteditUser(null); }}
             initialValues={editUser || {}}
+            customHandlers={{
+              responsibleDepartmentId: handleDepartmentChange
+            }}
           />
         )}
 

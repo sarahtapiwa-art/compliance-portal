@@ -1,6 +1,6 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import { apiClient } from '../../_utils/apiClient';
 import Table from '../../_components/Table';
 import Notification from '../../_components/Notifications/page';
@@ -41,7 +41,7 @@ const SubmissionsContent = () => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-
+  const status = searchParams.get('status'); // This will be "overdue"
   const [statusFilter, setStatusFilter] = useState("");
   const [frequencyFilter, setFrequencyFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -58,12 +58,21 @@ const SubmissionsContent = () => {
     setLoading(true);
     setError(null);
     try {
-      const params = {};
+      const urlParams = Object.fromEntries(searchParams.entries());
+
+      const params = new URLSearchParams();
+
+      // Add all parameters from URL
+      Object.entries(urlParams).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+
+      // Add additional parameters
       if (returnDefinitionId) {
-        params.returnDefinitionId = returnDefinitionId;
+        params.append('returnDefinitionId', returnDefinitionId);
       }
-      
-      const res = await apiClient.get(`/api/v1/submissions`, { params });
+
+      const res = await apiClient.get(`/api/v1/submissions?${params.toString()}`);
       setData(res.content || []);
     } catch (err) {
       setError(err.message);
