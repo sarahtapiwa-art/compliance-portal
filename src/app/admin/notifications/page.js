@@ -90,7 +90,9 @@ const NotificationPage = () => {
           duration={10000}
         />
       )}
-      <Table exportFileName="notifications" columns={tableColumns} data={tableData} />
+      <Table exportFileName="notifications"
+             loading={loading}
+             columns={tableColumns} data={tableData} />
       </div>
     </>
   );

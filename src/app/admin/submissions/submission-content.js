@@ -279,6 +279,7 @@ const SubmissionsContent = () => {
         data={formattedTableData} 
         onView={handleView}
         showSearch={false}
+        loading={loading}
         showViewButton={(row) => row.original.status === "SUBMITTED"}
       />
     </div>

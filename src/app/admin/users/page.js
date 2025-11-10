@@ -90,7 +90,15 @@ const UserPage = () => {
     fetchDepartments();
   }, []);
 
-
+  const handleEdit = (row) => {
+    if (!row.id) {
+      setError('Could not find user data for editing');
+      setShowNotification(true);
+      return;
+    }
+    seteditUser(row);
+    setShowForm(true);
+  };
   const handleFormSubmit = async (formData) => {
     try {
       if (editUser) {
@@ -189,7 +197,10 @@ const UserPage = () => {
           duration={10000}
         />
       )}
-      <Table exportFileName="User" columns={tableColumns} data={tableData}  />
+      <Table exportFileName="User"
+             columns={tableColumns}
+             loading={loading}
+             data={tableData}  />
       </div>
     </>
   );

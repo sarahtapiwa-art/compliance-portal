@@ -32,7 +32,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function fetchDashboardData() {
-      setLoading(true);
+      setLoading(false);
+      console.log('Loading dashboard', loading);
       setError(null);
       try {
         const [completionRes, overdueRes, overviewRes, upcomingRes] = await Promise.all([
@@ -114,7 +115,7 @@ export default function Dashboard() {
     <div className="dashboard">
       <h1>Compliance Dashboard</h1>
 
-      {overviewData && (
+      {overviewData && !loading  ? (
         <div className="metrics">
           <div className="metric metric-total clickable" onClick={() => handleMetricClick('total')} role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleMetricClick('total')}>
             <FiClipboard className="icon" />
@@ -157,7 +158,101 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      )}
+      ) : (
+          <div className="metrics">
+            <div className="metric metric-total clickable" onClick={() => handleMetricClick('total')} role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleMetricClick('total')}>
+              <FiClipboard className="icon" />
+              <div>
+                <h3>Total Submissions</h3>
+                <div className="flex items-center justify-center gap-2 p-4">
+                  {/* Option A - More explicit Tailwind */}
+                  <div
+                      className="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                  {/*<span className="text-gray-600">Loading data...</span>*/}
+                  <div className="dot-spinner">
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="metric metric-completed clickable" onClick={() => handleMetricClick('completed')} role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleMetricClick('completed')}>
+              <FiCheckCircle className="icon" />
+              <div>
+                <h3>Completed</h3>
+                <div className="flex items-center justify-center gap-2 p-4">
+                  {/* Option A - More explicit Tailwind */}
+                  <div
+                      className="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                  {/*<span className="text-gray-600">Loading data...</span>*/}
+                  <div className="dot-spinner">
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="metric metric-overdue clickable" onClick={() => handleMetricClick('overdue')} role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleMetricClick('overdue')}>
+              <FiAlertTriangle className="icon" />
+              <div>
+                <h3>Overdue</h3>
+                <div className="flex items-center justify-center gap-2 p-4">
+                  {/* Option A - More explicit Tailwind */}
+                  <div
+                      className="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                  {/*<span className="text-gray-600">Loading data...</span>*/}
+                  <div className="dot-spinner">
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="metric metric-upcoming clickable" onClick={() => handleMetricClick('upcoming')} role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleMetricClick('upcoming')}>
+              <FiCalendar className="icon" />
+              <div>
+                <h3>Upcoming</h3>
+                <div className="flex items-center justify-center gap-2 p-4">
+                  {/* Option A - More explicit Tailwind */}
+                  <div
+                      className="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                  {/*<span className="text-gray-600">Loading data...</span>*/}
+                  <div className="dot-spinner">
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                    <div className="dot-spinner__dot"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
             {/* Upcoming Submissions */}
             <div className="chart-row chart-upcoming">

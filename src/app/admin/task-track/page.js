@@ -133,7 +133,7 @@ const columns = [
           duration={10000}
         />
       )}
-      <Table exportFileName="taskTrack" columns={tableColumns} data={tableData} />
+      <Table exportFileName="taskTrack" loading={loading} columns={tableColumns} data={tableData} />
       </div>
     </>
   );

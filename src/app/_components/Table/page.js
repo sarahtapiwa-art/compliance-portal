@@ -411,13 +411,33 @@ const Table = ({
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
-              <tr className="empty-row">
-                <td colSpan={columns.length + 1 + (expandable ? 1 : 0)}>
-                  <div className="empty-state">
-                    {isLoading ? "Loading data…" : "No data found"}
-                  </div>
-                </td>
-              </tr>
+                <tr className="empty-row">
+                  <td colSpan={columns.length + 1 + (expandable ? 1 : 0)}>
+                    <div className="empty-state">
+                      {isLoading ? (
+                          <div className="flex items-center justify-center gap-2 p-4">
+                            {/* Option A - More explicit Tailwind */}
+                            <div
+                                className="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                            {/*<span className="text-gray-600">Loading data...</span>*/}
+                            <div className="dot-spinner">
+                              <div className="dot-spinner__dot"></div>
+                              <div className="dot-spinner__dot"></div>
+                              <div className="dot-spinner__dot"></div>
+                              <div className="dot-spinner__dot"></div>
+                              <div className="dot-spinner__dot"></div>
+                              <div className="dot-spinner__dot"></div>
+                              <div className="dot-spinner__dot"></div>
+                              <div className="dot-spinner__dot"></div>
+                            </div>
+                          </div>
+
+                      ) : (
+                          "No data found"
+                      )}
+                    </div>
+                  </td>
+                </tr>
             ) : (
               paginatedData.map((row, idx) => {
                 const computedRowId = (row && (row.id ?? row._id ?? row.uuid ?? row.ID)) ?? ((page - 1) * pageSize + idx);

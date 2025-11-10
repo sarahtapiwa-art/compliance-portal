@@ -184,6 +184,7 @@ const SchedulePage = () => {
           exportFileName="Schedule_Rules" 
           columns={tableColumns} 
           data={tableData}
+          loading={loading}
           onEdit={handleEdit} 
         />
     </div>
