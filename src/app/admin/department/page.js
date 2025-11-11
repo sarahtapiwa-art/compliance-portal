@@ -28,7 +28,7 @@ const fields = [
     { label: 'Responsible Person', name: 'responsiblePerson', required: true},
     { label: 'Responsible Person Email', name: 'responsiblePersonEmail', required: true },  
     { label: 'Escalation Email', name: 'escalationEmail', required: true },
-    { label: 'Head of Department', name: 'headOfDepartmentEmail', required: true },
+    { label: 'Manager', name: 'headOfDepartmentEmail', required: true },
   ];
 
 
