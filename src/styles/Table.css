@@ -334,7 +334,10 @@
     background-color: #fee2e2; 
     color: #991b1b; 
   }
-  
+.status-overdue {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
   .status-uploaded {
     background-color: #bfdbfe; 
     color: #1e40af; 
