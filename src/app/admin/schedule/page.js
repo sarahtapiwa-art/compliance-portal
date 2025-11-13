@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../_utils/apiClient';
 import Table from '../../_components/Table';
@@ -14,7 +14,6 @@ const columns = [
   { Header: 'Department', accessor: (row) => row.returnDefinition?.department?.departmentName || 'N/A' },
   { Header: 'Remind Days Before', accessor: 'remindDaysBefore' },
   { Header: 'Escalated After (Hours)', accessor: 'escalateAfterHours' },
-  { Header: 'Escalation Email', accessor: 'escalationEmail' },
 ];
 
 const getCellValue = (row, accessor) => {
@@ -34,6 +33,9 @@ const SchedulePage = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const router = useRouter();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
 
 
   const fields = [
@@ -41,20 +43,54 @@ const SchedulePage = () => {
     { label: 'Remind days before (CSV)', name: 'remindDaysBefore', required: true, type: 'text', placeholder: 'e.g., 1,3,7' },
     { label: 'Escalate After (Hours)', name: 'escalateAfterHours', required: true, type: 'number' },
   ];
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (requestedPage = page, requestedPageSize = pageSize, search = "", searchField = "") => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.get(`/api/v1/schedule-rule`);
+      const apiPage = Math.max(0, Number(requestedPage) - 1);
+      const apiSize = Number(requestedPageSize);
+
+      const params = new URLSearchParams({
+        page: apiPage.toString(),
+        size: apiSize.toString()
+      });
+
+      if (search && searchField) {
+        params.append('search', search);
+        params.append('searchField', searchField);
+      }
+
+      const res = await apiClient.get(`/api/v1/schedule-rule?${params.toString()}`);
       setData(res.content || []);
+
+      const total = res?.page?.totalElements || res?.totalElements || res?.total;
+      setTotalElements(typeof total === 'number' ? total : (res?.content || []).length);
+
     } catch (err) {
       setError(err.message);
       setShowNotification(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    fetchData(page, pageSize);
+  }, [page, pageSize, fetchData]);
+
+  // const fetchData = async () => {
+  //   setLoading(true);
+  //   setError(null);
+  //   try {
+  //     const res = await apiClient.get(`/api/v1/schedule-rule`);
+  //     setData(res.content || []);
+  //   } catch (err) {
+  //     setError(err.message);
+  //     setShowNotification(true);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const fetchReturnDefinitions = async () => {
     try {
@@ -185,7 +221,19 @@ const SchedulePage = () => {
           columns={tableColumns} 
           data={tableData}
           loading={loading}
-          onEdit={handleEdit} 
+          onEdit={handleEdit}
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalElements}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            fetchData(newPage, pageSize);
+          }}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+            fetchData(1, newSize);
+          }}
         />
     </div>
   );

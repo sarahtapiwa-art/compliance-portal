@@ -86,7 +86,7 @@ const SubmissionsContent = () => {
     setLoading(true);
     setError(null);
     try {      
-      const res = await apiClient.get(`/api/v1/return-definition`);
+      const res = await apiClient.get(`/api/v1/return-definition?page=0&size=1000`);
       setReturnDefinitions(res.content || []);
     } catch (err) {
       setError(err.message);

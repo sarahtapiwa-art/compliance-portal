@@ -551,41 +551,51 @@ const Table = ({
           <div className="page-numbers">
             {Array.from({ length: Math.min(10, totalPages) }, (_, i) => {
               let pageNum;
-              if (totalPages <= 5) {
+              if (totalPages <= 10) {
+                // Show all pages if total pages is 10 or less
                 pageNum = i + 1;
-              } else if (page <= 3) {
+              } else if (page <= 5) {
+                // Show first 10 pages when near start
                 pageNum = i + 1;
-              } else if (page >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
+              } else if (page >= totalPages - 4) {
+                // Show last 10 pages when near end
+                pageNum = totalPages - 9 + i;
               } else {
-                pageNum = page - 2 + i;
+                // Show 5 pages before and 4 after current page (total 10)
+                pageNum = page - 5 + i;
               }
+
+              // Ensure pageNum doesn't exceed totalPages
+              pageNum = Math.min(pageNum, totalPages);
+
               return (
-                <button
-                  key={pageNum}
-                  onClick={() => handlePageChange(pageNum)}
-                  disabled={isLoading}
-                  className={`pagination-button ${
-                    page === pageNum ? "active" : ""
-                  }`}
-                >
-                  {pageNum}
-                </button>
+                  <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      disabled={isLoading}
+                      className={`pagination-button ${
+                          page === pageNum ? "active" : ""
+                      }`}
+                  >
+                    {pageNum}
+                  </button>
               );
             })}
-            {totalPages > 5 && page < totalPages - 2 && (
-              <span className="ellipsis">...</span>
-            )}
-            {totalPages > 5 && page < totalPages - 2 && (
-              <button
-                onClick={() => handlePageChange(totalPages)}
-                disabled={isLoading}
-                className={`pagination-button ${
-                  page === totalPages ? "active" : ""
-                }`}
-              >
-                {totalPages}
-              </button>
+
+            {/* Show ellipsis and last page when there are more pages and we're not at the end */}
+            {totalPages > 10 && page < totalPages - 5 && (
+                <>
+                  <span className="ellipsis">...</span>
+                  <button
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={isLoading}
+                      className={`pagination-button ${
+                          page === totalPages ? "active" : ""
+                      }`}
+                  >
+                    {totalPages}
+                  </button>
+                </>
             )}
           </div>
           <button

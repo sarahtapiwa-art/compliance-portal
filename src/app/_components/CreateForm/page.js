@@ -38,8 +38,7 @@ const CreateForm = ({
 
   const handleDateChange = (date, name) => {
     if (date) {
-      date.setHours(23, 59, 59, 0);
-      const isoString = date.toISOString();
+      const isoString = date.toLocaleString();
       setForm({
         ...form,
         [name]: isoString
@@ -179,22 +178,23 @@ const CreateForm = ({
                         className="form-input"
                       />
                     ) : field.type === 'date' ? (
-                      <DatePicker
-                        selected={form[field.name] ? new Date(form[field.name]) : null}
-                        onChange={date => handleDateChange(date, field.name)}
-                        dateFormat="yyyy-MM-dd HH:mm:ss"
-                        showTimeSelect
-                        timeFormat="HH:mm:ss"
-                        timeIntervals={1}
-                        timeCaption="Time"
-                        className="form-input"
-                        placeholderText="Select date and time"
-                        required={field.required}
-                        showMonthDropdown
-                        showYearDropdown
-                        dropdownMode="select"
-                        isClearable={true}
-                      />
+                        <DatePicker
+                            key={form[field.name] ? form[field.name].toString() : "empty"} // Force re-render when value changes
+                            selected={form[field.name] ? new Date(form[field.name]) : null}
+                            onChange={date => handleDateChange(date, field.name)}
+                            dateFormat="yyyy-MM-dd HH:mm:ss"
+                            showTimeSelect
+                            timeFormat="HH:mm:ss"
+                            timeIntervals={1}
+                            timeCaption="Time"
+                            className="form-input"
+                            placeholderText="Select date and time"
+                            required={field.required}
+                            showMonthDropdown
+                            showYearDropdown
+                            dropdownMode="select"
+                            isClearable={true}
+                        />
                     ) : field.type === 'tenure' ? (
                       <div className="tenure-fields">
                         <input
