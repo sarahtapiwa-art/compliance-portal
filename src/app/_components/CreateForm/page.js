@@ -38,10 +38,14 @@ const CreateForm = ({
 
   const handleDateChange = (date, name) => {
     if (date) {
-      const isoString = date.toLocaleString();
+      // Simple conversion to local ISO format
+      const localISOString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+          .toISOString()
+          .slice(0, -1);
+
       setForm({
         ...form,
-        [name]: isoString
+        [name]: localISOString
       });
     } else {
       setForm({

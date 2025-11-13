@@ -51,7 +51,6 @@ const SubmissionsContent = () => {
     { label: 'Start Date', name: 'periodStart', required: true, type: 'date' },
     { label: 'End Date', name: 'periodEnd', required: true, type: 'date' },
     { label: 'Due At', name: 'dueAt', required: true, type: 'date' },
-    { label: 'Status', name: 'status', required: true, type: 'select', options: STATUS },
   ];
 
   const fetchData = async (returnDefinitionId = null) => {
