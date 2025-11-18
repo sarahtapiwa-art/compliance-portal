@@ -7,6 +7,7 @@ import Notification from '../../_components/Notifications/page';
 import CreateForm from '../../_components/CreateForm/page';
 import '../../globals.css';
 import '../../../styles/Submissions.css';
+import {jwtDecode} from "jwt-decode";
 
 const columns = [
   { Header: 'Report Title', accessor: (row) => row.returnDefinition?.title || 'N/A' },
@@ -42,9 +43,11 @@ const SubmissionsContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const status = searchParams.get('status'); // This will be "overdue"
+
   const [statusFilter, setStatusFilter] = useState("");
   const [frequencyFilter, setFrequencyFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [userData, setUserData] = useState(null);
 
   const fields = [
     { label: 'Return Definition', name: 'returnDefinitionId', required: true, type: 'select', options: returnDefinitions.map(p => ({ label: p.title, value: p.id }))},
@@ -52,29 +55,45 @@ const SubmissionsContent = () => {
     { label: 'End Date', name: 'periodEnd', required: true, type: 'date' },
     { label: 'Due At', name: 'dueAt', required: true, type: 'date' },
   ];
-
+  useEffect(() => {
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUserData(decoded);
+      } catch (err) {
+      }
+    }
+  }, []);
   const fetchData = async (returnDefinitionId = null) => {
     setLoading(true);
     setError(null);
+
     try {
       const urlParams = Object.fromEntries(searchParams.entries());
-
       const params = new URLSearchParams();
 
-      // Add all parameters from URL
       Object.entries(urlParams).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
 
-      // Add additional parameters
+      // Only append user's department if NOT super admin and department exists
+      if (userData?.roles?.[0] !== "ROLE_SUPER_SYSTEM_ADMIN") {
+        const deptName = userData?.department?.departmentName;
+        if (deptName) {
+          params.append('departmentName', deptName);
+        }
+      }
+
       if (returnDefinitionId) {
         params.append('returnDefinitionId', returnDefinitionId);
       }
 
       const res = await apiClient.get(`/api/v1/submissions?${params.toString()}`);
       setData(res.content || []);
+
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Something went wrong');
       setShowNotification(true);
     } finally {
       setLoading(false);
@@ -84,8 +103,15 @@ const SubmissionsContent = () => {
   const fetchReturns = async () => {
     setLoading(true);
     setError(null);
-    try {      
-      const res = await apiClient.get(`/api/v1/return-definition?page=0&size=1000`);
+    try {
+      const params = new URLSearchParams({
+        page: 0,
+        size: 1000,
+      });
+      if (userData.roles?.[0] !== "ROLE_SUPER_SYSTEM_ADMIN") {
+        params.append('departmentName', userData.department?.departmentName || '');
+      }
+      const res = await apiClient.get(`/api/v1/return-definition?${params.toString()}`);
       setReturnDefinitions(res.content || []);
     } catch (err) {
       setError(err.message);
@@ -96,9 +122,11 @@ const SubmissionsContent = () => {
   };
 
   useEffect(() => {
-    fetchData();
-    fetchReturns();
-  }, []);
+    if (userData) {
+      fetchData();
+      fetchReturns();
+    }
+  }, [userData, searchParams]);
 
   useEffect(() => {
     const status = searchParams.get('status');
@@ -115,7 +143,7 @@ const SubmissionsContent = () => {
   const handleFormSubmit = async (formData) => {
     try {
       if (editSubmission) {
-        if (!editSubmission.id) return; 
+        if (!editSubmission.id) return;
         await apiClient.put(`/api/v1/submissions/${editSubmission.id}`, formData);
         setSuccessMessage('Submission updated successfully.');
       } else {
@@ -166,7 +194,7 @@ const SubmissionsContent = () => {
         </span>
       );
     }
-    return { ...newRow, original: row }; 
+    return { ...newRow, original: row };
   });
 
   const tableColumns = [
@@ -184,7 +212,7 @@ const SubmissionsContent = () => {
     <div className="submissions-page">
       <h2>Submissions</h2>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px', gap: '8px' }}>
-        <button 
+        <button
           onClick={() => setShowForm(true)}
           className="create-button"
         >
@@ -197,12 +225,12 @@ const SubmissionsContent = () => {
           <div className="filter">
             <label>Status</label>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="">All Statuses</option>
               {STATUS.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                  <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
           </div>
@@ -210,34 +238,37 @@ const SubmissionsContent = () => {
           <div className="filter">
             <label>Frequency</label>
             <select
-              value={frequencyFilter}
-              onChange={(e) => setFrequencyFilter(e.target.value)}
+                value={frequencyFilter}
+                onChange={(e) => setFrequencyFilter(e.target.value)}
             >
               <option value="">All Frequencies</option>
               {uniqueFrequencies.map(f => (
-                <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f}>{f}</option>
               ))}
             </select>
           </div>
 
-          <div className="filter">
-            <label>Department</label>
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-            >
-              <option value="">All Departments</option>
-              {uniqueDepartments.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
+          {/* Conditionally show Department filter for ROLE_SUPER_SYSTEM_ADMIN only */}
+          {userData?.roles?.[0] === "ROLE_SUPER_SYSTEM_ADMIN" && (
+              <div className="filter">
+                <label>Department</label>
+                <select
+                    value={departmentFilter}
+                    onChange={(e) => setDepartmentFilter(e.target.value)}
+                >
+                  <option value="">All Departments</option>
+                  {uniqueDepartments.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+          )}
         </div>
 
         <div className="filters-actions">
           <button
-            onClick={() => { setStatusFilter(''); setFrequencyFilter(''); setDepartmentFilter(''); }}
-            className="export-button"
+              onClick={() => { setStatusFilter(''); setFrequencyFilter(''); setDepartmentFilter(''); }}
+              className="export-button"
           >
             Clear Filters
           </button>
@@ -262,7 +293,7 @@ const SubmissionsContent = () => {
           onClose={() => setShowNotification(false)}
         />
       )}
-      
+
       {showSuccessNotification && successMessage && (
         <Notification
           message={successMessage}
@@ -272,10 +303,10 @@ const SubmissionsContent = () => {
         />
       )}
 
-      <Table 
-        exportFileName="Submissions" 
-        columns={tableColumns} 
-        data={formattedTableData} 
+      <Table
+        exportFileName="Submissions"
+        columns={tableColumns}
+        data={formattedTableData}
         onView={handleView}
         showSearch={false}
         loading={loading}

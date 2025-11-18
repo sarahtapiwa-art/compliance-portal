@@ -24,6 +24,13 @@ import {jwtDecode} from 'jwt-decode';
 
 const adminItems = [
   { name: "Dashboard", href: "/dashboard", icon: FiHome },
+  { name: "Departments", href: "/admin/department", icon: FiGrid },
+  { name: "Return Definition", href: "/admin/return-definition", icon: FiRepeat },
+  { name: "Schedule", href: "/admin/schedule", icon: FiCalendar },
+  { name: "Submissions", href: "/admin/submissions", icon: FiFileText },
+  { name: "Task Track", href: "/admin/task-track", icon: FiFileText },
+  { name: "Notifications", href: "/admin/notifications", icon: FiBell },
+  { name: "Users", href: "/admin/users", icon: FiUsers },
 
 ];
 
@@ -35,8 +42,6 @@ const userItems = [
   { name: "Submissions", href: "/admin/submissions", icon: FiFileText },
   { name: "Task Track", href: "/admin/task-track", icon: FiFileText },
   { name: "Notifications", href: "/admin/notifications", icon: FiBell },
-
-  { name: "Users", href: "/admin/users", icon: FiUsers },
 
 ];
 
@@ -111,7 +116,7 @@ export default function SideNav() {
       
       <nav className={`side-nav ${isMobileOpen ? 'open' : ''}`}>
         <ul className="side-nav-list">
-        {(userRole === 'SUPER_SYSTEM_ADMIN' ? adminItems : userItems).map((item) => {
+        {(userRole === 'ROLE_SUPER_SYSTEM_ADMIN' ? adminItems : userItems).map((item) => {
             const isActive = pathname.startsWith(item.href) || 
               (item.subItems && item.subItems.some(subItem => pathname.startsWith(subItem.href)));
             

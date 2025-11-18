@@ -63,7 +63,6 @@ const UserPage = () => {
   const getFields = () =>[
     { label: 'Username', name: 'username', required: true },
     { label: 'Email', name: 'email', required: true},
-    { label: 'Password', name: 'password', required: true},
     { label: 'Roles', name: 'roles', required: true, type: 'select', options: ROLE_OPTIONS },
     {
       label: 'Department',

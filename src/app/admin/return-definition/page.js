@@ -7,6 +7,7 @@ import Notification from '../../_components/Notifications/page'
 import CreateForm from '../../_components/CreateForm/page';
 import '../../globals.css';
 import BulkUpload from '../../_components/BulkUpload';
+import {jwtDecode} from "jwt-decode";
 
 const columns = [
   { Header: 'Title', accessor: 'title' },
@@ -41,30 +42,44 @@ const ReturnDefinitionPage = () => {
   const [formValues, setFormValues] = useState({});
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [userData, setUserData] = useState(null);
 
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
 
-  const fetchData = useCallback(async (requestedPage = page, requestedPageSize = pageSize, search = "", searchField = "") => {
+  const fetchData = useCallback(async (
+      requestedPage = page,
+      requestedPageSize = pageSize,
+      search = "",
+      searchField = ""
+  ) => {
     setLoading(true);
     setError(null);
+
     try {
       const apiPage = Math.max(0, Number(requestedPage) - 1);
       const apiSize = Number(requestedPageSize);
 
       const params = new URLSearchParams({
         page: apiPage.toString(),
-        size: apiSize.toString()
+        size: apiSize.toString(),
       });
 
+      // Only use user's department if they are NOT a super admin
+      if (userData.roles?.[0] !== "ROLE_SUPER_SYSTEM_ADMIN") {
+        params.append('departmentName', userData.department?.departmentName || '');
+      }
+
+      // Append search params if provided
       if (search && searchField) {
         params.append('search', search);
         params.append('searchField', searchField);
       }
 
       const res = await apiClient.get(`/api/v1/return-definition?${params.toString()}`);
+
       const enhancedData = (res.content || []).map(item => {
         const department = departments.find(dept => dept.id === item.responsibleDepartmentId);
         return {
@@ -73,6 +88,7 @@ const ReturnDefinitionPage = () => {
           responsibleDepartment: department ? department.departmentName : 'Unknown'
         };
       });
+
       setData(enhancedData);
 
       const total = res?.page?.totalElements || res?.totalElements || res?.total;
@@ -84,7 +100,8 @@ const ReturnDefinitionPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, userData, departments]);
+
 
   useEffect(() => {
     fetchData(page, pageSize);
@@ -97,16 +114,16 @@ const ReturnDefinitionPage = () => {
     { label: 'Email', name: 'regulatoryEmail', required: true },
     { label: 'Frequency', name: 'frequency', required: true, type: 'select', options: FREQUENCY_OPTIONS},
     { label: 'Submission Deadline', name: 'submissionDeadline', required: true, type: 'date' },
-    { 
-      label: 'Department', 
-      name: 'responsibleDepartmentId', 
-      required: true, 
-      type: 'select', 
-      options: departments.map(s => ({
-        value: s.id,
-        label: s.departmentName
-      }))
-    },
+    // {
+    //   label: 'Department',
+    //   name: 'responsibleDepartmentId',
+    //   required: true,
+    //   type: 'select',
+    //   options: departments.map(s => ({
+    //     value: s.id,
+    //     label: s.departmentName
+    //   }))
+    // },
   
     { label: 'Description', name: 'description', required: true, type: 'textarea' },  
   ];
@@ -125,7 +142,16 @@ const ReturnDefinitionPage = () => {
     fetchDepartments();
   }, []);
 
-
+  useEffect(() => {
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUserData(decoded);
+      } catch (err) {
+      }
+    }
+  }, []);
 
   const handleEdit = (row) => {
     if (!row.id) {
@@ -233,7 +259,8 @@ const ReturnDefinitionPage = () => {
       
       const dataToSubmit = {
         ...submittedData,
-        responsiblePerson: department?.contactPerson || ''
+        responsibleDepartmentId: userData.department.id,
+        responsiblePerson: userData.department.responsiblePersonEmail
       };
   
       if (editReturnDefinition) {
