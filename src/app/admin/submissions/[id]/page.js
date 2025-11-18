@@ -49,7 +49,7 @@ const SubmissionViewPage = () => {
   const [fileType, setFileType] = useState(null); // 'pdf', 'image', 'unknown'
 
   const isSubmitted = submission?.status === 'SUBMITTED' || submission?.status === 'CLOSED';
-  const hasFiles = submission?.status === 'UPLOADED';
+  const hasFiles = submission?.status === 'UPLOADED' || submission?.status === 'OVERDUE';
   const hasApprovedFile = document?.status === 'VERIFIED';
   const hasPendingFile = submission?.files?.some(file => file.status === 'PENDING');
   const [userRole, setUserRole] = useState('');
@@ -355,15 +355,30 @@ const SubmissionViewPage = () => {
 
       // Determine file type and create appropriate blob
       let fileType = 'application/octet-stream';
-      let isImage = false;
-      let isPdf = false;
+      let fileCategory = 'unknown';
 
+      // Map content types to categories
       if (contentType.includes('pdf')) {
         fileType = 'application/pdf';
-        isPdf = true;
+        fileCategory = 'pdf';
       } else if (contentType.includes('image')) {
         fileType = contentType;
-        isImage = true;
+        fileCategory = 'image';
+      } else if (
+          contentType.includes('msword') ||
+          contentType.includes('wordprocessingml') ||
+          contentType.includes('officedocument.wordprocessingml')
+      ) {
+        fileType = contentType;
+        fileCategory = 'word';
+      } else if (
+          contentType.includes('ms-excel') ||
+          contentType.includes('spreadsheetml') ||
+          contentType.includes('officedocument.spreadsheetml') ||
+          contentType.includes('opendocument.spreadsheet')
+      ) {
+        fileType = contentType;
+        fileCategory = 'excel';
       } else {
         // Fallback: try to determine from filename in content-disposition
         const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
@@ -371,10 +386,16 @@ const SubmissionViewPage = () => {
           const filename = filenameMatch[1].toLowerCase();
           if (filename.endsWith('.pdf')) {
             fileType = 'application/pdf';
-            isPdf = true;
+            fileCategory = 'pdf';
           } else if (filename.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/)) {
             fileType = `image/${filename.split('.').pop()}`;
-            isImage = true;
+            fileCategory = 'image';
+          } else if (filename.match(/\.(doc|docx)$/)) {
+            fileType = 'application/msword';
+            fileCategory = 'word';
+          } else if (filename.match(/\.(xls|xlsx|ods)$/)) {
+            fileType = 'application/vnd.ms-excel';
+            fileCategory = 'excel';
           }
         }
       }
@@ -382,13 +403,13 @@ const SubmissionViewPage = () => {
       const blob = new Blob([fileData], { type: fileType });
       const blobUrl = URL.createObjectURL(blob);
 
-      console.log('File type detected:', { fileType, isImage, isPdf });
+      console.log('File type detected:', { fileType, fileCategory });
       console.log('Blob URL created:', blobUrl);
 
       // Set state with file info
       setViewingFile(blobUrl);
       setDocumentUrl(blobUrl);
-      setFileType(isPdf ? 'pdf' : isImage ? 'image' : 'unknown');
+      setFileType(fileCategory);
 
     } catch (err) {
       console.error("Failed to load file:", err);
@@ -659,65 +680,159 @@ const SubmissionViewPage = () => {
                             }}
                         />
                       </div>
+                  ) : fileType === 'word' || fileType === 'excel' ? (
+                      // Office Documents - Show download option with preview message
+                      <div className="office-document-viewer">
+                        <div className="office-document-placeholder">
+                          <FiFile size={64} style={{ color: '#006834', marginBottom: '1rem' }} />
+                          <h3>Office Document</h3>
+                          <p>
+                            {fileType === 'word'
+                                ? 'Word document cannot be previewed in browser.'
+                                : 'Excel spreadsheet cannot be previewed in browser.'
+                            }
+                          </p>
+                          <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>
+                            Please download the file to view its contents.
+                          </p>
+                          <div className="office-document-actions">
+                            <a
+                                href={viewingFile}
+                                download={`document.${fileType === 'word' ? 'docx' : 'xlsx'}`}
+                                className="download-button primary"
+                                style={{
+                                  padding: '0.75rem 1.5rem',
+                                  backgroundColor: '#006834',
+                                  color: 'white',
+                                  textDecoration: 'none',
+                                  borderRadius: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  fontWeight: '500'
+                                }}
+                            >
+                              <FiDownload />
+                              Download {fileType === 'word' ? 'Word Document' : 'Excel Spreadsheet'}
+                            </a>
+                            <button
+                                onClick={() => window.open(viewingFile, '_blank')}
+                                className="open-external-button"
+                                style={{
+                                  padding: '0.75rem 1.5rem',
+                                  backgroundColor: 'transparent',
+                                  color: '#006834',
+                                  border: '1px solid #006834',
+                                  borderRadius: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  fontWeight: '500',
+                                  cursor: 'pointer'
+                                }}
+                            >
+                              <FiExternalLink />
+                              Open in New Tab
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                   ) : (
                       // Fallback for unknown file types
                       <div className="unknown-file-type">
                         <FiFile size={48} style={{ color: '#e74c3c', marginBottom: '1rem' }} />
                         <h3>Unsupported File Type</h3>
-                        <p>This file type cannot be previewed.</p>
-                        <a
-                            href={viewingFile}
-                            download
-                            className="download-button"
-                        >
-                          Download File
-                        </a>
+                        <p>This file type cannot be previewed in the browser.</p>
+                        <div className="file-actions">
+                          <a
+                              href={viewingFile}
+                              download="document"
+                              className="download-button"
+                              style={{
+                                padding: '0.75rem 1.5rem',
+                                backgroundColor: '#006834',
+                                color: 'white',
+                                textDecoration: 'none',
+                                borderRadius: '4px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                fontWeight: '500'
+                              }}
+                          >
+                            <FiDownload />
+                            Download File
+                          </a>
+                        </div>
                       </div>
                   )}
 
                   {/* Common actions for all file types */}
                   <div className="viewer-actions" style={{ marginTop: '1rem', padding: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                      <a
+                          href={viewingFile}
+                          download="document"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary"
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#006834',
+                            color: 'white',
+                            textDecoration: 'none',
+                            borderRadius: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}
+                      >
+                        <FiDownload />
+                        Download
+                      </a>
 
-
-
-                    {document.status === 'PENDING_VERIFICATION' && (
-                        <>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <button
-                              onClick={() => handleVerifyDocument(document.id, 'VERIFIED')}
-                              disabled={verifying}
-                              className="action-button success"
-                              style={{
-                                padding: '0.5rem 1rem',
-                                backgroundColor: '#006834',
-                                color: 'white',
-                                textDecoration: 'none',
-                                borderRadius: '4px',
-                                display: 'inline-block',
-                                marginRight: '0.5rem' // Add right margin
-                              }}
-                          >
-                            {verifying ? 'Verifying...' : 'Approve'}
-                          </button>
-                          <button
-                              onClick={() => handleRejectDocument(document.id, 'REJECTED')}
-                              disabled={rejecting}
-                              className="action-button danger"
-                              style={{
-                                padding: '0.5rem 1rem',
-                                backgroundColor: '#dc3545', // Changed to red for reject button
-                                color: 'white',
-                                textDecoration: 'none',
-                                borderRadius: '4px',
-                                display: 'inline-block',
-                                marginLeft: '0.5rem' // Add left margin
-                              }}
-                          >
-                            {rejecting ? 'Rejecting...' : 'Reject'}
-                          </button>
-                        </div>
-                        </>
-                    )}
+                      {document?.status === 'PENDING_VERIFICATION' && userRole === 'ROLE_ADMIN' && (
+                          <>
+                            <button
+                                onClick={() => handleVerifyDocument(document.id, 'VERIFIED')}
+                                disabled={verifying}
+                                className="action-button success"
+                                style={{
+                                  padding: '0.5rem 1rem',
+                                  backgroundColor: '#006834',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  cursor: 'pointer'
+                                }}
+                            >
+                              <FiCheckCircle />
+                              {verifying ? 'Verifying...' : 'Approve'}
+                            </button>
+                            <button
+                                onClick={() => handleRejectDocument(document.id, 'REJECTED')}
+                                disabled={rejecting}
+                                className="action-button danger"
+                                style={{
+                                  padding: '0.5rem 1rem',
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  cursor: 'pointer'
+                                }}
+                            >
+                              {rejecting ? 'Rejecting...' : 'Reject'}
+                            </button>
+                          </>
+                      )}
+                    </div>
                   </div>
                 </div>
             ) : (

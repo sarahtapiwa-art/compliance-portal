@@ -13,7 +13,7 @@ const columns = [
   { Header: 'Responsible Person', accessor: 'responsiblePerson' },
   { Header: 'Responsible Person Email', accessor: 'responsiblePersonEmail' },
   { Header: 'Escalation Email', accessor: 'escalationEmail' },
-  { Header: 'Head of Department Email', accessor: 'headOfDepartmentEmail' },
+  { Header: 'Manager', accessor: 'headOfDepartmentEmail' },
 ];
 
 
