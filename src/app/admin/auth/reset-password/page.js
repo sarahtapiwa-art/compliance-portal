@@ -2,28 +2,59 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiLogIn, FiUser} from 'react-icons/fi';
+import { FiLogIn, FiUser, FiLock } from 'react-icons/fi';
 import styles from '../../../../styles/Login.module.css';
 import { apiClient } from '../../../_utils/apiClient';
+import {useRouter} from "next/navigation";
 
 export default function ResetPasswordPage() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const router = useRouter();
+  const validatePasswords = () => {
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('Passwords do not match');
+      return false;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters long');
+      return false;
+    }
+    setPasswordError('');
+    return true;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
+    setPasswordError('');
+
+    // Validate passwords before submitting
+    if (!validatePasswords()) {
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const data = await apiClient.post(
-        '/api/v1/auth/change-password',
-        { oldPassword, newPassword },
-        {
-          'Content-Type': 'application/json',
-        }
+          '/api/auth/reset-password',
+          { oldPassword, newPassword,confirmNewPassword},
+          {
+            'Content-Type': 'application/json',
+          }
       );
+      // Optional: Add success message or redirect
+      try {
+        sessionStorage.removeItem('token');
+        document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+        router.push('/auth/login');
+      } catch (error) {
+        setError(error.message);
+      }
     } catch (err) {
       setError(err?.data?.message || err.message || 'Change Password failed');
     } finally {
@@ -31,91 +62,144 @@ export default function ResetPasswordPage() {
     }
   };
 
+  // Real-time validation for confirm password
+  const handleConfirmPasswordChange = (e) => {
+    const value = e.target.value;
+    setConfirmPassword(value);
+
+    // Only show error if confirm password has value and doesn't match
+    if (value && newPassword !== value) {
+      setPasswordError('Passwords do not match');
+    } else if (value && newPassword === value) {
+      setPasswordError('');
+    }
+  };
+
   return (
-    <div className={styles.container}>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className={styles.card}
-      >
+      <div className={styles.container}>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className={styles.card}
+        >
 
-        <div className={styles.header}>
-          <h1 className={styles.title}>Change Password</h1>
-        </div>
+          <div className={styles.header}>
+            <h1 className={styles.title}>Change Password</h1>
+          </div>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={styles.errorMessage}
-            >
-              {error}
-            </motion.div>
-          )}
-        <div className={styles.inputGroup}>
-            <label htmlFor="oldPassword" className={styles.inputLabel}>Password</label>
-            <div className={styles.inputContainer}>
-              <div className={styles.inputIcon}>
-                <FiUser />
-              </div>
-              <input
-                id="oldPassword"
-                type="text"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                className={styles.inputField}
-                placeholder="Enter your old password"
-                required
-              />
-            </div>
-          </div>
-          
-          <div className={styles.inputGroup}>
-            <label htmlFor="newPassword" className={styles.inputLabel}>New Password</label>
-            <div className={styles.inputContainer}>
-              <div className={styles.inputIcon}>
-                <FiUser />
-              </div>
-              <input
-                id="newPassword"
-                type="text"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className={styles.inputField}
-                placeholder="Enter your new Password"
-                required
-              />
-            </div>
-          </div>
-          <div className={styles.options}>
-            <a href="/dashboard" className={styles.forgotPassword}>
-              Back to dashboard
-            </a>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            disabled={isLoading}
-            className={styles.submitButton}
-          >
-            {isLoading ? (
-              <div className={styles.spinnerContainer}>
-                <div className={styles.spinner}></div>
-L              </div>
-            ) : (
-              <>
-                <FiLogIn className={styles.buttonIcon} />
-                Reset Password
-              </>
+          <form onSubmit={handleSubmit} className={styles.form}>
+            {error && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={styles.errorMessage}
+                >
+                  {error}
+                </motion.div>
             )}
-          </motion.button>
-        </form>
 
+            {passwordError && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={styles.errorMessage}
+                >
+                  {passwordError}
+                </motion.div>
+            )}
 
-      </motion.div>
-    </div>
+            <div className={styles.inputGroup}>
+              <label htmlFor="oldPassword" className={styles.inputLabel}>Current Password</label>
+              <div className={styles.inputContainer}>
+                <div className={styles.inputIcon}>
+                  <FiLock />
+                </div>
+                <input
+                    id="oldPassword"
+                    type="password"
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    className={styles.inputField}
+                    placeholder="Enter your current password"
+                    required
+                />
+              </div>
+            </div>
+
+            <div className={styles.inputGroup}>
+              <label htmlFor="newPassword" className={styles.inputLabel}>New Password</label>
+              <div className={styles.inputContainer}>
+                <div className={styles.inputIcon}>
+                  <FiLock />
+                </div>
+                <input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      // Re-validate when new password changes
+                      if (confirmNewPassword && e.target.value !== confirmNewPassword) {
+                        setPasswordError('Passwords do not match');
+                      } else if (confirmNewPassword && e.target.value === confirmNewPassword) {
+                        setPasswordError('');
+                      }
+                    }}
+                    className={styles.inputField}
+                    placeholder="Enter your new password"
+                    required
+                    minLength={6}
+                />
+              </div>
+            </div>
+
+            <div className={styles.inputGroup}>
+              <label htmlFor="confirmNewPassword" className={styles.inputLabel}>Confirm New Password</label>
+              <div className={styles.inputContainer}>
+                <div className={styles.inputIcon}>
+                  <FiLock />
+                </div>
+                <input
+                    id="confirmNewPassword"
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={handleConfirmPasswordChange}
+                    className={styles.inputField}
+                    placeholder="Confirm your new password"
+                    required
+                    minLength={6}
+                />
+              </div>
+            </div>
+
+            <div className={styles.options}>
+              <a href="/dashboard" className={styles.forgotPassword}>
+                Back to dashboard
+              </a>
+            </div>
+
+            <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={isLoading || !!passwordError}
+                className={`${styles.submitButton} ${(isLoading || passwordError) ? styles.disabled : ''}`}
+            >
+              {isLoading ? (
+                  <div className={styles.spinnerContainer}>
+                    <div className={styles.spinner}></div>
+                  </div>
+              ) : (
+                  <>
+                    <FiLogIn className={styles.buttonIcon} />
+                    Change Password
+                  </>
+              )}
+            </motion.button>
+          </form>
+
+        </motion.div>
+      </div>
   );
 }

@@ -26,7 +26,7 @@ export default function TopNav() {
   };
 
   const handleChangePassword = async () => {
-      router.push('auth/reset-password');
+      router.push('/admin/auth/reset-password');
   }
   
   const fetchData = async () => {

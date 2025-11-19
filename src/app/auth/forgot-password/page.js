@@ -1,17 +1,22 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiLogIn, FiEye, FiEyeOff, FiUser, FiLock, FiMail } from 'react-icons/fi';
 import styles from '../../../styles/Login.module.css';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../_utils/apiClient';
 import Image from 'next/image';
+// import Notification from "@/app/_components/Notifications/page";
+import Notification from '../../_components/Notifications/page'
 
 export default function ForgotPasswordPage() {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showNotification, setShowNotification] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e) => {
@@ -20,12 +25,15 @@ export default function ForgotPasswordPage() {
     setError('');
     try {
       const data = await apiClient.post(
-        '/api/v1/auth/forgot-password',
-        { phoneNumber },
+        '/api/auth/forgot-password',
+        { email },
         {
           'Content-Type': 'application/json',
         }
       );
+      const message = typeof data === 'string' ? data : data?.message;
+      setSuccessMessage(`${message}`);
+      setShowSuccessNotification(true);
     } catch (err) {
       setError(err?.data?.message || err.message || 'Forgot Password failed');
     } finally {
@@ -54,7 +62,7 @@ export default function ForgotPasswordPage() {
 
         <div className={styles.header}>
           <h1 className={styles.title}>Forgot Password</h1>
-          <p className={styles.subtitle}>Add your phone number</p>
+          <p className={styles.subtitle}>Enter your email</p>
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
@@ -69,23 +77,37 @@ export default function ForgotPasswordPage() {
           )}
           
           <div className={styles.inputGroup}>
-            <label htmlFor="phoneNumber" className={styles.inputLabel}>Phone Number</label>
+            <label htmlFor="userEmail" className={styles.inputLabel}>Email</label>
             <div className={styles.inputContainer}>
               <div className={styles.inputIcon}>
                 <FiUser />
               </div>
               <input
-                id="phoneNumber"
+                id="email"
                 type="text"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                value={email}
+                onChange={(e) => setUserEmail(e.target.value)}
                 className={styles.inputField}
-                placeholder="Enter your phone number"
+                placeholder="Enter your email"
                 required
               />
             </div>
           </div>
+          {showNotification && error && (
+              <Notification
+                  message={`Error loading User: ${error}`}
+                  type="error"
+                  onClose={() => setShowNotification(false)}
+              />
+          )}
+          {showSuccessNotification && successMessage && (
+              <Notification
+                  message={successMessage}
+                  type="success"
+                  onClose={() => setShowSuccessNotification(false)}
 
+              />
+          )}
           <div className={styles.options}>
             <a href="/auth/login" className={styles.forgotPassword}>
               Login

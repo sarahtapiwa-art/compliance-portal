@@ -35,7 +35,7 @@ const UserPage = () => {
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [departments, setDepartments] = useState([]);
-
+  const [creating, setCreating] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [editUser, seteditUser] = useState(null);
   const [showNotification, setShowNotification] = useState(false);
@@ -99,6 +99,7 @@ const UserPage = () => {
     setShowForm(true);
   };
   const handleFormSubmit = async (formData) => {
+    setCreating(true);
     try {
       if (editUser) {
         if (!editUser.id) return;
@@ -124,6 +125,8 @@ const UserPage = () => {
     } catch (err) {
       setError(err.message);
       setShowNotification(true);
+    } finally {
+      setCreating(false);
     }
   };
 
