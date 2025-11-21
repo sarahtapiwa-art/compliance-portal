@@ -12,6 +12,7 @@ import {
   FiCheckCircle,
   FiSend,
   FiEye,
+  FiEyeOff,
   FiDownload,
   FiFile, FiExternalLink
 } from 'react-icons/fi';
@@ -49,12 +50,15 @@ const SubmissionViewPage = () => {
   const [fileType, setFileType] = useState(null); // 'pdf', 'image', 'unknown'
 
   const isSubmitted = submission?.status === 'SUBMITTED' || submission?.status === 'CLOSED';
-  const hasFiles = submission?.status === 'UPLOADED' || submission?.status === 'OVERDUE';
+  const hasFiles = submission?.status === 'UPLOADED'
+  const isOverDue = submission?.status === 'OVERDUE';
+  const isOverDueUploaded = submission?.status === 'UPLOADED_OVERDUE';
   const hasApprovedFile = document?.status === 'VERIFIED';
   const hasPendingFile = submission?.files?.some(file => file.status === 'PENDING');
+  const pendingVerification = document?.status === 'PENDING_VERIFICATION';
   const [userRole, setUserRole] = useState('');
   const [decodedToken, setDecodedToken] = useState(null);
-
+  const [showPassword, setShowPassword] = useState(false);
   const fetchSubmission = async () => {
     setLoading(true);
     setError(null);
@@ -561,7 +565,7 @@ const SubmissionViewPage = () => {
       </div>
 
       {/* File Upload Section - Show only when no files exist */}
-      {!hasFiles && (
+      {!hasFiles && !isOverDueUploaded && !pendingVerification && !hasApprovedFile &&(
         <div className="action-card">
           <div className="action-header">
             <FiPaperclip className="action-icon" />
@@ -605,7 +609,7 @@ const SubmissionViewPage = () => {
       )}
 
       {/* File Verification Section - Show when files exist but none are approved */}
-      {hasFiles && !hasApprovedFile && !isSubmitted && userRole === 'ROLE_ADMIN' && (
+      {!hasApprovedFile && !isSubmitted && isOverDueUploaded && userRole === 'ROLE_ADMIN' && (
         <div className="action-card">
           <div className="action-header">
             <FiEye className="action-icon" />
@@ -848,126 +852,396 @@ const SubmissionViewPage = () => {
           </div>
         </div>
       )}
+      {!hasApprovedFile && !isSubmitted && isOverDue && userRole === 'ROLE_ADMIN' && (
+          <div className="action-card">
+            <div className="action-header">
+              <FiEye className="action-icon" />
+              <h3>Verify Attached Files</h3>
+            </div>
+
+
+
+            <p className="action-description">
+              Please review and verify the attached files before proceeding with submission.
+            </p>
+
+            <div className='stand-container'>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+
+                <a
+                    href={viewingFile}
+                    download="document"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary"
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#006834',
+                      color: 'white',
+                      textDecoration: 'none',
+                      borderRadius: '4px',
+                      display: 'inline-block',
+                    }}
+                >
+                  <FiDownload style={{ marginRight: '0.5rem' }} />
+                  Download
+                </a>
+              </div>
+
+              {viewingFile ? (
+                  <div className="file-preview-container">
+                    {fileType === 'pdf' ? (
+                        // PDF Viewer
+                        <div className="pdf-viewer">
+                          <iframe
+                              src={`${viewingFile}#view=fitH`}
+                              title="PDF Document Viewer"
+                              width="100%"
+                              height="600px"
+                              style={{ border: '1px solid #ddd', borderRadius: '4px' }}
+                              onLoad={() => console.log('PDF loaded successfully')}
+                              onError={() => {
+                                console.error('PDF failed to load');
+                                setError('Failed to display PDF document');
+                              }}
+                          />
+                        </div>
+                    ) : fileType === 'image' ? (
+                        // Image Viewer
+                        <div className="image-viewer">
+                          <img
+                              src={viewingFile}
+                              alt="Document Preview"
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '600px',
+                                display: 'block',
+                                margin: '0 auto',
+                                borderRadius: '4px',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                              }}
+                              onLoad={() => console.log('Image loaded successfully')}
+                              onError={() => {
+                                console.error('Image failed to load');
+                                setError('Failed to display image');
+                              }}
+                          />
+                        </div>
+                    ) : fileType === 'word' || fileType === 'excel' ? (
+                        // Office Documents - Show download option with preview message
+                        <div className="office-document-viewer">
+                          <div className="office-document-placeholder">
+                            <FiFile size={64} style={{ color: '#006834', marginBottom: '1rem' }} />
+                            <h3>Office Document</h3>
+                            <p>
+                              {fileType === 'word'
+                                  ? 'Word document cannot be previewed in browser.'
+                                  : 'Excel spreadsheet cannot be previewed in browser.'
+                              }
+                            </p>
+                            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>
+                              Please download the file to view its contents.
+                            </p>
+                            <div className="office-document-actions">
+                              <a
+                                  href={viewingFile}
+                                  download={`document.${fileType === 'word' ? 'docx' : 'xlsx'}`}
+                                  className="download-button primary"
+                                  style={{
+                                    padding: '0.75rem 1.5rem',
+                                    backgroundColor: '#006834',
+                                    color: 'white',
+                                    textDecoration: 'none',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontWeight: '500'
+                                  }}
+                              >
+                                <FiDownload />
+                                Download {fileType === 'word' ? 'Word Document' : 'Excel Spreadsheet'}
+                              </a>
+                              <button
+                                  onClick={() => window.open(viewingFile, '_blank')}
+                                  className="open-external-button"
+                                  style={{
+                                    padding: '0.75rem 1.5rem',
+                                    backgroundColor: 'transparent',
+                                    color: '#006834',
+                                    border: '1px solid #006834',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontWeight: '500',
+                                    cursor: 'pointer'
+                                  }}
+                              >
+                                <FiExternalLink />
+                                Open in New Tab
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                    ) : (
+                        // Fallback for unknown file types
+                        <div className="unknown-file-type">
+                          <FiFile size={48} style={{ color: '#e74c3c', marginBottom: '1rem' }} />
+                          <h3>Unsupported File Type</h3>
+                          <p>This file type cannot be previewed in the browser.</p>
+                          <div className="file-actions">
+                            <a
+                                href={viewingFile}
+                                download="document"
+                                className="download-button"
+                                style={{
+                                  padding: '0.75rem 1.5rem',
+                                  backgroundColor: '#006834',
+                                  color: 'white',
+                                  textDecoration: 'none',
+                                  borderRadius: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  fontWeight: '500'
+                                }}
+                            >
+                              <FiDownload />
+                              Download File
+                            </a>
+                          </div>
+                        </div>
+                    )}
+
+                    {/* Common actions for all file types */}
+                    <div className="viewer-actions" style={{ marginTop: '1rem', padding: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                        <a
+                            href={viewingFile}
+                            download="document"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-primary"
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#006834',
+                              color: 'white',
+                              textDecoration: 'none',
+                              borderRadius: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
+                        >
+                          <FiDownload />
+                          Download
+                        </a>
+
+                        {document?.status === 'PENDING_VERIFICATION' && userRole === 'ROLE_ADMIN' && (
+                            <>
+                              <button
+                                  onClick={() => handleVerifyDocument(document.id, 'VERIFIED')}
+                                  disabled={verifying}
+                                  className="action-button success"
+                                  style={{
+                                    padding: '0.5rem 1rem',
+                                    backgroundColor: '#006834',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    cursor: 'pointer'
+                                  }}
+                              >
+                                <FiCheckCircle />
+                                {verifying ? 'Verifying...' : 'Approve'}
+                              </button>
+                              <button
+                                  onClick={() => handleRejectDocument(document.id, 'REJECTED')}
+                                  disabled={rejecting}
+                                  className="action-button danger"
+                                  style={{
+                                    padding: '0.5rem 1rem',
+                                    backgroundColor: '#dc3545',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    cursor: 'pointer'
+                                  }}
+                              >
+                                {rejecting ? 'Rejecting...' : 'Reject'}
+                              </button>
+                            </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+              ) : (
+                  // No document available
+                  <div className="no-document">
+                    <FiFile size={48} style={{ color: '#bdc3c7', marginBottom: '1rem' }} />
+                    <h3>Document not available</h3>
+                    <p>Unable to load the document for preview.</p>
+                  </div>
+              )}
+
+
+            </div>
+          </div>
+      )}
 
       {/* Send Submission Section - Show only when there's an approved file */}
-      {hasApprovedFile && !isSubmitted &&  (
-        <div className="action-card">
-          <div className="action-header">
-            <FiSend className="action-icon" />
-            <h3>Send Submission</h3>
+      {hasApprovedFile && !isSubmitted && userRole === 'ROLE_USER' && (
+          <div className="action-card">
+            <div className="action-header">
+              <FiSend className="action-icon" />
+              <h3>Send Submission</h3>
+            </div>
+
+            <div className="status-card success">
+              <FiCheckCircle className="status-icon" />
+              <div>
+                <h4>File Approved</h4>
+                <p>Your file has been verified and approved. You can now send the submission.</p>
+              </div>
+            </div>
+
+            <p className="action-description">
+              Fill in the email credentials to send this submission to the regulatory body.
+            </p>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Username:</label>
+                <input
+                    type="text"
+                    name="username"
+                    value={emailCredentials.username}
+                    onChange={handleInputChange}
+                    className="form-input"
+                    placeholder="Email username"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Password:</label>
+                <div className="password-input-container">
+                  <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={emailCredentials.password}
+                      onChange={handleInputChange}
+                      className="form-input"
+                      placeholder="Email password"
+                  />
+                  <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Subject:</label>
+              <input
+                  type="text"
+                  name="subject"
+                  value={emailCredentials.subject}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  placeholder="Email subject"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">CC Emails:</label>
+
+              <div className="cc-input-group">
+                <input
+                    type="text"
+                    value={ccInput}
+                    onChange={handleCcInputChange}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCcEmail();
+                      }
+                    }}
+                    className="form-input"
+                    placeholder="Enter CC email and press Enter or click Add"
+                />
+                <button
+                    onClick={addCcEmail}
+                    disabled={!ccInput.trim() || !isValidEmail(ccInput.trim())}
+                    className="add-cc-button"
+                >
+                  Add
+                </button>
+              </div>
+
+              {emailCredentials.cc.length > 0 && (
+                  <div className="cc-recipients">
+                    <div className="cc-label">CC Recipients:</div>
+                    {emailCredentials.cc.map((email, index) => (
+                        <div key={index} className="cc-tag">
+                          {email}
+                          <button
+                              onClick={() => removeCcEmail(index)}
+                              className="remove-cc-button"
+                          >
+                            ×
+                          </button>
+                        </div>
+                    ))}
+                  </div>
+              )}
+            </div>
+
+            <button
+                onClick={handleSendSubmission}
+                disabled={sending}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#006834',
+                  color: 'white',
+                  textDecoration: 'none',
+                  borderRadius: '4px',
+                  display: 'inline-block'
+                }}
+                className={`action-button primary ${sending ? 'loading' : ''}`}
+            >
+              {sending ? 'Sending...' : 'Send Submission'}
+            </button>
           </div>
-          
+      )}
+      {/* Completed Submission */}
+      {hasApprovedFile && !isSubmitted && userRole === 'ROLE_ADMIN' &&(
           <div className="status-card success">
             <FiCheckCircle className="status-icon" />
             <div>
-              <h4>File Approved</h4>
-              <p>Your file has been verified and approved. You can now send the submission.</p>
+              <h3>File Verified</h3>
+              <p>File has been successfully verified.</p>
             </div>
           </div>
-          
-          <p className="action-description">
-            Fill in the email credentials to send this submission to the regulatory body.
-          </p>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Username:</label>
-              <input
-                type="text"
-                name="username"
-                value={emailCredentials.username}
-                onChange={handleInputChange}
-                className="form-input"
-                placeholder="Email username"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Password:</label>
-              <input
-                type="password"
-                name="password"
-                value={emailCredentials.password}
-                onChange={handleInputChange}
-                className="form-input"
-                placeholder="Email password"
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Subject:</label>
-            <input
-              type="text"
-              name="subject"
-              value={emailCredentials.subject}
-              onChange={handleInputChange}
-              className="form-input"
-              placeholder="Email subject"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">CC Emails:</label>
-            
-            <div className="cc-input-group">
-              <input
-                type="text"
-                value={ccInput}
-                onChange={handleCcInputChange}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addCcEmail();
-                  }
-                }}
-                className="form-input"
-                placeholder="Enter CC email and press Enter or click Add"
-              />
-              <button
-                onClick={addCcEmail}
-                disabled={!ccInput.trim() || !isValidEmail(ccInput.trim())}
-                className="add-cc-button"
-              >
-                Add
-              </button>
-            </div>
-
-            {emailCredentials.cc.length > 0 && (
-              <div className="cc-recipients">
-                <div className="cc-label">CC Recipients:</div>
-                {emailCredentials.cc.map((email, index) => (
-                  <div key={index} className="cc-tag">
-                    {email}
-                    <button
-                      onClick={() => removeCcEmail(index)}
-                      className="remove-cc-button"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <button
-            onClick={handleSendSubmission}
-            disabled={sending}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#006834',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '4px',
-              display: 'inline-block'
-            }}
-            className={`action-button primary ${sending ? 'loading' : ''}`}
-          >
-            {sending ? 'Sending...' : 'Send Submission'}
-          </button>
-        </div>
       )}
-
+      {pendingVerification  && userRole === 'ROLE_USER' &&(
+          <div className="status-card success">
+            <FiCheckCircle className="status-icon" />
+            <div>
+              <h3>File Uploaded</h3>
+              <p>File is pending verification.</p>
+            </div>
+          </div>
+      )}
       {/* Completed Submission */}
       {isSubmitted && (
         <div className="status-card success">

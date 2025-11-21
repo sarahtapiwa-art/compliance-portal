@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import { apiClient } from '../../_utils/apiClient';
 import Table from '../../_components/Table';
@@ -7,6 +7,7 @@ import Notification from '../../_components/Notifications/page';
 import CreateForm from '../../_components/CreateForm/page';
 import '../../globals.css';
 import '../../../styles/Submissions.css';
+import {jwtDecode} from "jwt-decode";
 
 const columns = [
     { Header: 'Report Title', accessor: (row) => row.returnDefinition?.title || 'N/A' },
@@ -184,6 +185,7 @@ const SubmissionStatus = () => {
     const [statusFilter, setStatusFilter] = useState("");
     const [frequencyFilter, setFrequencyFilter] = useState("");
     const [departmentFilter, setDepartmentFilter] = useState("");
+    const [userData, setUserData] = useState(null);
 
     // Function to generate dynamic title based on active filters
     const getSubmissionsTitle = () => {
@@ -267,33 +269,73 @@ const SubmissionStatus = () => {
         { label: 'Status', name: 'status', required: true, type: 'select', options: STATUS },
     ];
 
-    const fetchData = async (returnDefinitionId = null) => {
+    // Get user data on component mount
+    useEffect(() => {
+        const token = sessionStorage.getItem('token');
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                setUserData(decoded);
+                console.log('User Data:', decoded);
+                console.log('User Role:', decoded.roles?.[0]);
+                console.log('User Department:', decoded.department?.departmentName);
+            } catch (err) {
+                console.error('Error decoding token:', err);
+            }
+        }
+    }, []);
+
+    // Use useCallback to memoize fetchData
+    const fetchData = useCallback(async (returnDefinitionId = null) => {
         setLoading(true);
         setError(null);
+
         try {
             const urlParams = Object.fromEntries(searchParams.entries());
-
             const params = new URLSearchParams();
 
-            // Add all parameters from URL
             Object.entries(urlParams).forEach(([key, value]) => {
                 if (value) params.append(key, value);
             });
 
-            // Add additional parameters
+            // Only append user's department if NOT super admin and department exists
+            if (userData?.roles?.[0] !== "ROLE_SUPER_SYSTEM_ADMIN") {
+                const deptName = userData?.department?.departmentName;
+                if (deptName) {
+                    params.append('departmentName', deptName);
+                    console.log('Filtering by Department:', deptName);
+                } else {
+                    console.log('No department found for user');
+                }
+            } else {
+                console.log('Super admin - showing all departments');
+            }
+
             if (returnDefinitionId) {
                 params.append('returnDefinitionId', returnDefinitionId);
             }
 
-            const res = await apiClient.get(`/api/v1/submissions?${params.toString()}`);
+            const queryString = params.toString();
+            console.log('API Request URL:', `/api/v1/submissions?${queryString}`);
+
+            const res = await apiClient.get(`/api/v1/submissions?${queryString}`);
             setData(res.content || []);
+
+            // Debug: Check what data we received
+            console.log('Received data:', res.content);
+            if (res.content && res.content.length > 0) {
+                console.log('Departments in received data:',
+                    res.content.map(item => item.returnDefinition?.department?.departmentName)
+                );
+            }
+
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Something went wrong');
             setShowNotification(true);
         } finally {
             setLoading(false);
         }
-    };
+    }, [userData, searchParams]); // Add dependencies
 
     const fetchReturns = async () => {
         setLoading(true);
@@ -309,10 +351,13 @@ const SubmissionStatus = () => {
         }
     };
 
+    // Fetch data when userData is available
     useEffect(() => {
-        fetchData();
-        fetchReturns();
-    }, []);
+        if (userData !== null) { // Only fetch when userData is loaded (even if null)
+            fetchData();
+            fetchReturns();
+        }
+    }, [userData, fetchData]); // Add fetchData to dependencies
 
     useEffect(() => {
         const status = searchParams.get('status');

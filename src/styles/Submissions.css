@@ -335,7 +335,33 @@
     margin-bottom: 1rem;
     font-size: 1.125rem;
   }
-  
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-container .form-input {
+  padding-right: 2.5rem;
+  width: 100%;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle:hover {
+  color: #333;
+}
   /* Responsive Design */
   @media (max-width: 768px) {
     .container {
