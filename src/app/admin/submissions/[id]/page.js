@@ -72,6 +72,7 @@ const SubmissionViewPage = () => {
       if (id){
           try {
             const res = await apiClient.get(`/api/v1/documents/${id}`);
+            console.log('res', res);
             setDocument(res);
 
           } catch (err) {
@@ -91,6 +92,12 @@ const SubmissionViewPage = () => {
     }
   };
 
+  const needsVerification =
+      !hasApprovedFile &&
+      !isSubmitted &&
+      pendingVerification &&
+      userRole === 'ROLE_ADMIN' &&
+      (isOverDueUploaded || hasFiles);
 
 
   const fetchData = async () => {
@@ -609,7 +616,7 @@ const SubmissionViewPage = () => {
       )}
 
       {/* File Verification Section - Show when files exist but none are approved */}
-      {!hasApprovedFile && !isSubmitted && isOverDueUploaded && userRole === 'ROLE_ADMIN' && (
+      {needsVerification && (
         <div className="action-card">
           <div className="action-header">
             <FiEye className="action-icon" />
@@ -852,6 +859,7 @@ const SubmissionViewPage = () => {
           </div>
         </div>
       )}
+
       {!hasApprovedFile && !isSubmitted && isOverDue && userRole === 'ROLE_ADMIN' && (
           <div className="action-card">
             <div className="action-header">
