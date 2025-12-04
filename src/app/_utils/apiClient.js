@@ -142,6 +142,17 @@ getAccessToken(userToken = null) {
         headers: mergedHeaders,
       });
     }
+    outlookPost(endpoint, body = {}, headers = {}) {
+        const mergedHeaders = {
+            // ...this.getHeaders(),
+            ...headers
+        };
+        return this.request(endpoint, {
+            method: 'POST',
+            body,
+            headers: mergedHeaders,
+        });
+    }
     
     put(endpoint, body = {}, headers = {}) {
       const mergedHeaders = {
@@ -229,6 +240,6 @@ getAccessToken(userToken = null) {
       return this.get('/api/v1/return-definition', params);
     }
   }
-  
+
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
   export const apiClient = new ApiClient(baseUrl);

@@ -43,6 +43,7 @@ const ReturnDefinitionPage = () => {
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [creating, setCreating] = useState(false);
 
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -255,8 +256,10 @@ const ReturnDefinitionPage = () => {
 
   const handleFormSubmit = async (submittedData) => {
     try {
+      setCreating(true);
       const department = departments.find(d => d.id === parseInt(submittedData.responsibleDepartmentId));
-      
+
+
       const dataToSubmit = {
         ...submittedData,
         responsibleDepartmentId: userData.department.id,
@@ -280,7 +283,10 @@ const ReturnDefinitionPage = () => {
       await fetchData();
     } catch (err) {
       setError(err.message);
+      setCreating(false);
       setShowNotification(true);
+    } finally {
+      setCreating(false);
     }
   };
   
@@ -337,6 +343,7 @@ const ReturnDefinitionPage = () => {
           onCancel={handleFormCancel}
           initialValues={editReturnDefinition || {}}
           formValues={formValues}
+          loading={creating}
           onFieldChange={handleFormChange}
           customHandlers={{
             responsibleDepartmentId: handleDepartmentChange

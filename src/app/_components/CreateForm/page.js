@@ -12,6 +12,7 @@ const CreateForm = ({
   initialValues = {},
   onCancel,
   title = 'Create New',
+    loading = false,
   onChange
 }) => {
   const [form, setForm] = useState(initialValues);
@@ -343,14 +344,22 @@ const CreateForm = ({
             {onCancel && (
               <button 
                 type="button" 
-                onClick={onCancel} 
+                onClick={onCancel}
+                disabled={loading}
                 className="cancel-button"
               >
                 Cancel
               </button>
             )}
-            <button type="submit" className="submit-button">
-              {buttonLabel}
+            <button type="submit" disabled={loading} className="submit-button">
+              {loading ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    Submitting...
+                  </>
+              ) : (
+                  buttonLabel
+              )}
             </button>
           </div>
         </form>

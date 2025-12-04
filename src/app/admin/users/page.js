@@ -174,6 +174,7 @@ const UserPage = () => {
             title={editUser ? "Update User" : "Add User"}
             fields={getFields()}
             onSubmit={handleFormSubmit}
+            loading={creating}
             buttonLabel={editUser ? "Update User" : "Create User"}
             onCancel={() => { setShowForm(false); seteditUser(null); }}
             initialValues={editUser || {}}

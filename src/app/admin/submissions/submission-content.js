@@ -43,7 +43,7 @@ const SubmissionsContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const status = searchParams.get('status'); // This will be "overdue"
-
+  const [creating, setCreating] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [frequencyFilter, setFrequencyFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -142,6 +142,7 @@ const SubmissionsContent = () => {
 
   const handleFormSubmit = async (formData) => {
     try {
+      setCreating(true);
       if (editSubmission) {
         if (!editSubmission.id) return;
         await apiClient.put(`/api/v1/submissions/${editSubmission.id}`, formData);
@@ -280,6 +281,7 @@ const SubmissionsContent = () => {
           title={editSubmission ? "Update Submission" : "Add Submission"}
           fields={fields}
           onSubmit={handleFormSubmit}
+          loading={creating}
           buttonLabel={editSubmission ? "Update Submission" : "Create Submission"}
           onCancel={() => { setShowForm(false); setEditSubmission(null); }}
           initialValues={editSubmission || {}}

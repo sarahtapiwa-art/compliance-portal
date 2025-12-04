@@ -34,6 +34,7 @@ const SchedulePage = () => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const router = useRouter();
   const [page, setPage] = useState(1);
+  const [creating, setCreating] = useState(false);
   const [pageSize, setPageSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
 
@@ -115,6 +116,7 @@ const SchedulePage = () => {
 
   const handleFormSubmit = async (formData) => {
     try {
+      setCreating(true);
       if (editSchedule) {
         if (!editSchedule.id) return; 
         await apiClient.put(`/api/v1/schedule-rule/${editSchedule.id}`, formData);
@@ -131,6 +133,8 @@ const SchedulePage = () => {
     } catch (err) {
       setError(err.message);
       setShowNotification(true);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -192,6 +196,7 @@ const SchedulePage = () => {
           title={editSchedule ? "Update Schedule Rule" : "Add Schedule Rule"}
           fields={fields}
           onSubmit={handleFormSubmit}
+          loading={creating}
           buttonLabel={editSchedule ? "Update Schedule Rule" : "Create Schedule Rule"}
           onCancel={() => { setShowForm(false); setEditSchedule(null); }}
           initialValues={editSchedule || {}}

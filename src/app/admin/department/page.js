@@ -36,6 +36,7 @@ const fields = [
 const DepartmentPage = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editDepartment, seteditDepartment] = useState(null);
@@ -112,6 +113,7 @@ const DepartmentPage = () => {
 
   const handleFormSubmit = async (formData) => {
     try {
+      setCreating(true);
       if (editDepartment) {
         if (!editDepartment.id) return; 
         await apiClient.put(`/api/v1/departments/${editDepartment.id}`, formData);
@@ -128,6 +130,8 @@ const DepartmentPage = () => {
     } catch (err) {
       setError(err.message);
       setShowNotification(true);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -164,6 +168,7 @@ const DepartmentPage = () => {
           <CreateForm
             title={editDepartment ? "Update Department" : "Add Department"}
             fields={fields}
+            loading={creating}
             onSubmit={handleFormSubmit}
             buttonLabel={editDepartment ? "Update Department" : "Create Department"}
             onCancel={() => { setShowForm(false); seteditDepartment(null); }}

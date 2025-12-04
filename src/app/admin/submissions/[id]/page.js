@@ -1,6 +1,9 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useMsal } from '@azure/msal-react';
+import { loginRequest } from '../../../lib/msalConfig';
+import { sendEmail } from '../../../lib/graphClient';
 import { apiClient } from '../../../_utils/apiClient';
 import Notification from '../../../_components/Notifications/page';
 import '../../../globals.css';
@@ -13,13 +16,42 @@ import {
   FiSend,
   FiEye,
   FiEyeOff,
+  FiUser,
   FiDownload,
   FiFile, FiExternalLink
 } from 'react-icons/fi';
 import '../../../../styles/Submissions.css';
 import {jwtDecode} from "jwt-decode";
+// import {useAuth} from "@/app/hooks/useAuth";
 
 const SubmissionViewPage = () => {
+  // const {
+  //   isAuthenticated,
+  //   userNEmail,
+  //   isLoading: authLoading,
+  //   login,
+  //   logout,
+  //   getToken
+  // } = useAuth();
+
+  // ... rest of your state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Sync auth state with your component state
+  // useEffect(() => {
+  //   if (!authLoading) {
+  //     setIsLoggedIn(isAuthenticated);
+  //   }
+  // }, [isAuthenticated, authLoading]);
+
+  const [userEmail, setUserEmail] = useState('');
+  const [regulatoryEmail, setRegulatoryEmail] = useState('');
+  const [emailSubject, setEmailSubject] = useState(`Compliance Submission: ${ 'Approved Document'}`);
+  const [ccEmails, setCcEmails] = useState([]);
+  const [additionalMessage, setAdditionalMessage] = useState('');
+
+// Get MSAL instance
+  const { instance, accounts } = useMsal();
   const router = useRouter();
   const params = useParams();
   const submissionId = params.id;
@@ -58,6 +90,8 @@ const SubmissionViewPage = () => {
   const pendingVerification = document?.status === 'PENDING_VERIFICATION';
   const [userRole, setUserRole] = useState('');
   const [decodedToken, setDecodedToken] = useState(null);
+
+  const [microsoftToken, setMicrosoftToken] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const fetchSubmission = async () => {
     setLoading(true);
@@ -91,7 +125,43 @@ const SubmissionViewPage = () => {
       setLoading(false);
     }
   };
+  const handleOutlookLogin = async () => {
+    try {
+      const response = await instance.loginPopup(loginRequest);
 
+      if (response && response.account) {
+        setIsLoggedIn(true);
+        setUserEmail(response.account.username || response.account.name);
+
+        // Try to get user profile
+        try {
+          const tokenResponse = await instance.acquireTokenSilent({
+            ...loginRequest,
+            account: response.account
+          });
+          console.log('Token', tokenResponse);
+          setMicrosoftToken(tokenResponse.accessToken);
+
+          // You could fetch user details here if needed
+          console.log('Login successful for:', response.account.username);
+        } catch (tokenError) {
+          console.log('Got account but token acquisition needed');
+        }
+      }
+    } catch (error) {
+      console.error('Outlook login failed:', error);
+      alert(`Login failed: ${error.message}. Please try again.`);
+    }
+  };
+  // const handleOutlookLogin = async () => {
+  //   try {
+  //     await login();
+  //     // No need to manually set isLoggedIn, useAuth hook will handle it
+  //   } catch (error) {
+  //     console.error('Login failed:', error);
+  //     alert(`Login failed: ${error.message}. Please try again.`);
+  //   }
+  // };
   const needsVerification =
       !hasApprovedFile &&
       !isSubmitted &&
@@ -245,47 +315,141 @@ const SubmissionViewPage = () => {
       setVerifying(false);
     }
   };
-
   const handleSendSubmission = async () => {
-    if (!emailCredentials.username || !emailCredentials.password) {
-      setError('Email credentials are required');
-      setShowNotification(true);
+
+
+    if (!accounts[0]) {
+      alert('Please sign in with Outlook first');
       return;
     }
 
     setSending(true);
-    setError(null);
 
     try {
-      let url = `/api/v1/submissions/${submissionId}/send`;
-      
-      if (emailCredentials.cc.length > 0) {
-        const queryParams = emailCredentials.cc
-          .map(email => `cc=${encodeURIComponent(email)}`)
-          .join('&');
-        url += `?${queryParams}`;
+      // Get access token
+      const tokenResponse = await instance.acquireTokenSilent({
+        ...loginRequest,
+        account: accounts[0]
+      }).catch(async (error) => {
+        // If silent acquisition fails, try popup
+        if (error.name === 'InteractionRequiredAuthError') {
+          return await instance.acquireTokenPopup(loginRequest);
+        }
+        throw error;
+      });
+      console.log('MiCRO', tokenResponse);
+
+    
+
+      // Update submission status in your backend
+        setSending(true);
+        setError(null);
+
+        try {
+          let url = `/api/v1/submissions/${submissionId}/send-outlook`;
+
+          // if (emailCredentials.cc.length > 0) {
+          //   const queryParams = emailCredentials.cc
+          //     .map(email => `cc=${encodeURIComponent(email)}`)
+          //     .join('&');
+          //   url += `?${queryParams}`;
+          // }
+          const headers = {
+            'accept': 'application/json',
+            // 'Authorization': `Bearer ${microsoftToken}`,
+            'Content-Type': 'application/json'
+          };
+          console.log('Email',emailCredentials.cc)
+          await apiClient.outlookPost(
+            url,
+            {
+
+              email: decodedToken?.email,
+              microsoftToken:`Bearer ${microsoftToken}`,
+                  recipients: emailCredentials.cc,
+            },
+              headers,
+          );
+
+          setSuccessMessage('Submission sent successfully!');
+          setShowSuccessNotification(true);
+
+          await fetchSubmission();
+        } catch (err) {
+          setError(err.message || 'Failed to send submission');
+          setShowNotification(true);
+        } finally {
+          setSending(false);
+        }
+
+      if (!submissionResponse.ok) {
+        throw new Error('Failed to update submission status');
       }
 
-      await apiClient.post(
-        url,
-        {
-          username: emailCredentials.username,
-          password: emailCredentials.password,
-          subject: emailCredentials.subject
-        }
-      );
+      // Success!
 
-      setSuccessMessage('Submission sent successfully!');
-      setShowSuccessNotification(true);
-      
-      await fetchSubmission();
-    } catch (err) {
-      setError(err.message || 'Failed to send submission');
-      setShowNotification(true);
+
+      // Optional: Refresh the page or update state
+      // router.refresh(); // If using Next.js 13+ App Router
+
+    } catch (error) {
+      // console.error('Error sending submission:', error);
+      //
+      // let errorMessage = 'Failed to send submission. ';
+      //
+      // if (error.message.includes('Mail.Send')) {
+      //   errorMessage += 'Please ensure you have granted Mail.Send permission for this app.';
+      // } else if (error.message.includes('AADSTS65001')) {
+      //   errorMessage += 'Consent required. Please sign in again and accept all permissions.';
+      // } else {
+      //   errorMessage += error.message;
+      // }
+      //
+      // alert(errorMessage);
     } finally {
       setSending(false);
     }
   };
+  // const handleSendSubmission = async () => {
+  //   if (!emailCredentials.username || !emailCredentials.password) {
+  //     setError('Email credentials are required');
+  //     setShowNotification(true);
+  //     return;
+  //   }
+  //
+  //   setSending(true);
+  //   setError(null);
+  //
+  //   try {
+  //     let url = `/api/v1/submissions/${submissionId}/send`;
+  //
+  //     if (emailCredentials.cc.length > 0) {
+  //       const queryParams = emailCredentials.cc
+  //         .map(email => `cc=${encodeURIComponent(email)}`)
+  //         .join('&');
+  //       url += `?${queryParams}`;
+  //     }
+  //
+  //     await apiClient.post(
+  //       url,
+  //       {
+  //         username: emailCredentials.username,
+  //         password: emailCredentials.password,
+  //         subject: emailCredentials.subject
+  //       }
+  //     );
+  //
+  //     setSuccessMessage('Submission sent successfully!');
+  //     setShowSuccessNotification(true);
+  //
+  //     await fetchSubmission();
+  //   } catch (err) {
+  //     setError(err.message || 'Failed to send submission');
+  //     setShowNotification(true);
+  //   } finally {
+  //     setSending(false);
+  //   }
+  // };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -579,16 +743,16 @@ const SubmissionViewPage = () => {
             <h3>Attach File</h3>
           </div>
           
-          <div className="form-group">
-            <label className="form-label">Owner Email:</label>
-            <input
-              type="email"
-              value={attachingPersonEmail}
-              onChange={(e) => setAttachingPersonEmail(e.target.value)}
-              className="form-input"
-              placeholder="Enter owner email"
-            />
-          </div>
+          {/*<div className="form-group">*/}
+          {/*  <label className="form-label">Owner Email:</label>*/}
+          {/*  <input*/}
+          {/*    type="email"*/}
+          {/*    value={attachingPersonEmail}*/}
+          {/*    onChange={(e) => setAttachingPersonEmail(e.target.value)}*/}
+          {/*    className="form-input"*/}
+          {/*    placeholder="Enter owner email"*/}
+          {/*  />*/}
+          {/*</div>*/}
           
           <div className="form-group">
             <label className="form-label">Select File (Max 10MB):</label>
@@ -1109,126 +1273,138 @@ const SubmissionViewPage = () => {
           <div className="action-card">
             <div className="action-header">
               <FiSend className="action-icon" />
-              <h3>Send Submission</h3>
+              <h3>Send Submission via Outlook</h3>
             </div>
 
             <div className="status-card success">
               <FiCheckCircle className="status-icon" />
               <div>
                 <h4>File Approved</h4>
-                <p>Your file has been verified and approved. You can now send the submission.</p>
+                <p>Your file has been verified and approved. You can now send the submission via Outlook.</p>
               </div>
             </div>
 
-            <p className="action-description">
-              Fill in the email credentials to send this submission to the regulatory body.
-            </p>
+            {!isLoggedIn ? (
+                <>
+                  <p className="action-description">
+                    Sign in with your Outlook/Microsoft account to send this submission to the regulatory body.
+                    You&#39;ll need to grant Mail.Send permission.
+                  </p>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Username:</label>
-                <input
-                    type="text"
-                    name="username"
-                    value={emailCredentials.username}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    placeholder="Email username"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Password:</label>
-                <div className="password-input-container">
-                  <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={emailCredentials.password}
-                      onChange={handleInputChange}
-                      className="form-input"
-                      placeholder="Email password"
-                  />
                   <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={handleOutlookLogin}
+                      className="outlook-login-button"
+                      style={{
+                        backgroundColor: '#0078d4',
+                        color: 'white',
+                        padding: '10px 20px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        marginBottom: '20px'
+                      }}
                   >
-                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                      <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    Sign in with Microsoft Account
                   </button>
-                </div>
-              </div>
-            </div>
+                </>
+            ) : (
+                <>
 
-            <div className="form-group">
-              <label className="form-label">Subject:</label>
-              <input
-                  type="text"
-                  name="subject"
-                  value={emailCredentials.subject}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  placeholder="Email subject"
-              />
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">CC Emails:</label>
 
-              <div className="cc-input-group">
-                <input
-                    type="text"
-                    value={ccInput}
-                    onChange={handleCcInputChange}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addCcEmail();
-                      }
-                    }}
-                    className="form-input"
-                    placeholder="Enter CC email and press Enter or click Add"
-                />
-                <button
-                    onClick={addCcEmail}
-                    disabled={!ccInput.trim() || !isValidEmail(ccInput.trim())}
-                    className="add-cc-button"
-                >
-                  Add
-                </button>
-              </div>
+                  <div className="form-group">
+                    <label className="form-label">CC Emails:</label>
 
-              {emailCredentials.cc.length > 0 && (
-                  <div className="cc-recipients">
-                    <div className="cc-label">CC Recipients:</div>
-                    {emailCredentials.cc.map((email, index) => (
-                        <div key={index} className="cc-tag">
-                          {email}
-                          <button
-                              onClick={() => removeCcEmail(index)}
-                              className="remove-cc-button"
-                          >
-                            ×
-                          </button>
+                    <div className="cc-input-group">
+                      <input
+                          type="text"
+                          value={ccInput}
+                          onChange={handleCcInputChange}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addCcEmail();
+                            }
+                          }}
+                          className="form-input"
+                          placeholder="Enter CC email and press Enter or click Add"
+                      />
+                      <button
+                          onClick={addCcEmail}
+                          disabled={!ccInput.trim() || !isValidEmail(ccInput.trim())}
+                          className="add-cc-button"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    {ccEmails.length > 0 && (
+                        <div className="cc-recipients">
+                          <div className="cc-label">CC Recipients:</div>
+                          {ccEmails.map((email, index) => (
+                              <div key={index} className="cc-tag">
+                                {email}
+                                <button
+                                    onClick={() => removeCcEmail(index)}
+                                    className="remove-cc-button"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                          ))}
                         </div>
-                    ))}
+                    )}
                   </div>
-              )}
-            </div>
 
-            <button
-                onClick={handleSendSubmission}
-                disabled={sending}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#006834',
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '4px',
-                  display: 'inline-block'
-                }}
-                className={`action-button primary ${sending ? 'loading' : ''}`}
-            >
-              {sending ? 'Sending...' : 'Send Submission'}
-            </button>
+
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button
+                        onClick={() => setIsLoggedIn(false)}
+                        className="secondary-button"
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: '#6c757d',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                    >
+                      Use Different Account
+                    </button>
+
+                    <button
+                        onClick={handleSendSubmission}
+                        disabled={sending }
+                        className={`action-button primary ${sending ? 'loading' : ''}`}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor:  '#006834',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor:  'pointer',
+                          flex: 1
+                        }}
+                    >
+                      {sending ? (
+                          <>
+                            <span className="spinner" style={{marginRight: '8px'}}></span>
+                            Sending via Outlook...
+                          </>
+                      ) : 'Send Submission via Outlook'}
+                    </button>
+                  </div>
+                </>
+            )}
           </div>
       )}
       {/* Completed Submission */}
