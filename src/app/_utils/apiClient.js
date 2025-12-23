@@ -245,7 +245,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 // In dev: '' so fetch calls go to frontend proxy
 // In prod: full backend URL
-const baseUrl = isDev ? '' : process.env.NEXT_PUBLIC_API_BASE_URL || 'https://192.168.3.143:18000';
+const baseUrl = isDev ? '' : process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.3.143:18000';
 
 
 export const apiClient = new ApiClient(baseUrl)

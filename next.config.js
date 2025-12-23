@@ -40,11 +40,11 @@ const nextConfig = {
             return [
                 {
                     source: '/api/:path*',
-                    destination: 'http://192.168.1.145:18000/api/:path*',
+                    destination: 'http://192.168.3.143:18000/api/:path*',
                 },
                 {
                     source: '/backend/:path*',
-                    destination: 'http://192.168.1.145:18000/:path*',
+                    destination: 'http://192.168.3.143:18000/:path*',
                 },
             ];
         }

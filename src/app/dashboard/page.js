@@ -59,7 +59,7 @@ export default function Dashboard() {
   const formatCompletionData = () => {
     return completionData.map(item => ({
       department: item.department,
-      rate: item.completionRate * 100 
+      rate: item.completionRate
     }));
   };
 
