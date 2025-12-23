@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import { apiClient } from '../../_utils/apiClient';
 import Table from '../../_components/Table';
@@ -48,6 +48,9 @@ const SubmissionsContent = () => {
   const [frequencyFilter, setFrequencyFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [userData, setUserData] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
 
   const fields = [
     { label: 'Return Definition', name: 'returnDefinitionId', required: true, type: 'select', options: returnDefinitions.map(p => ({ label: p.title, value: p.id }))},
@@ -65,13 +68,23 @@ const SubmissionsContent = () => {
       }
     }
   }, []);
-  const fetchData = async (returnDefinitionId = null) => {
+  const fetchData = useCallback(async ( requestedPage = page,
+                            requestedPageSize = pageSize,
+                            returnDefinitionId = null,
+                            ) => {
     setLoading(true);
     setError(null);
 
     try {
+      const apiPage = Math.max(0, Number(requestedPage) - 1);
+      const apiSize = Number(requestedPageSize);
+
+      const params = new URLSearchParams({
+        page: apiPage.toString(),
+        size: apiSize.toString(),
+      });
       const urlParams = Object.fromEntries(searchParams.entries());
-      const params = new URLSearchParams();
+      // const params = new URLSearchParams();
 
       Object.entries(urlParams).forEach(([key, value]) => {
         if (value) params.append(key, value);
@@ -91,6 +104,8 @@ const SubmissionsContent = () => {
 
       const res = await apiClient.get(`/api/v1/submissions?${params.toString()}`);
       setData(res.content || []);
+      const total = res?.page?.totalElements || res?.totalElements || res?.total;
+      setTotalElements(typeof total === 'number' ? total : (res?.content || []).length);
 
     } catch (err) {
       setError(err.message || 'Something went wrong');
@@ -98,7 +113,7 @@ const SubmissionsContent = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, userData]);
 
   const fetchReturns = async () => {
     setLoading(true);
@@ -311,6 +326,18 @@ const SubmissionsContent = () => {
         data={formattedTableData}
         onView={handleView}
         showSearch={false}
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalElements}
+        onPageChange={(newPage) => {
+          setPage(newPage);
+          fetchData(newPage, pageSize);
+        }}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setPage(1);
+          fetchData(1, newSize);
+        }}
         loading={loading}
         showViewButton={(row) => row.original.status === "SUBMITTED"}
       />

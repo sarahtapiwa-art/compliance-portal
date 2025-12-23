@@ -241,5 +241,11 @@ getAccessToken(userToken = null) {
     }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-  export const apiClient = new ApiClient(baseUrl);
+const isDev = process.env.NODE_ENV === 'development';
+
+// In dev: '' so fetch calls go to frontend proxy
+// In prod: full backend URL
+const baseUrl = isDev ? '' : process.env.NEXT_PUBLIC_API_BASE_URL || 'https://192.168.3.143:18000';
+
+
+export const apiClient = new ApiClient(baseUrl)

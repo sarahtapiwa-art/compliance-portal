@@ -504,7 +504,7 @@ const SubmissionViewPage = () => {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       if (!token) throw new Error("Missing authentication token");
 
-      const response = await fetch(`http://192.168.3.88:18000/api/v1/documents/${id}/view`, {
+      const response = await fetch(`https://192.168.1.145:18000/api/v1/documents/${id}/view`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

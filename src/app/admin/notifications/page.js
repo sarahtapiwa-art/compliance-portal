@@ -29,13 +29,26 @@ const NotificationPage = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
-
-    const fetchData = async () => {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
+    const fetchData = async (requestedPage = page,
+                             requestedPageSize = pageSize) => {
       setLoading(true);
       setError(null);
       try {
-        const res = await apiClient.get(`/api/v1/notification-log`);
+        const apiPage = Math.max(0, Number(requestedPage) - 1);
+        const apiSize = Number(requestedPageSize);
+
+        const params = new URLSearchParams({
+          page: apiPage.toString(),
+          size: apiSize.toString(),
+        });
+
+        const res = await apiClient.get(`/api/v1/notification-log?${params.toString()}`);
         setData(res.content || []);
+        const total = res?.page?.totalElements || res?.totalElements || res?.total;
+        setTotalElements(typeof total === 'number' ? total : (res?.content || []).length);
       } catch (err) {
         setError(err.message);
         setShowNotification(true);
@@ -47,12 +60,6 @@ const NotificationPage = () => {
     useEffect(() => {
       fetchData();
     }, []);
-
-
-
-
-
-
 
   const tableData = data.map(row => {
     const newRow = {};
@@ -92,7 +99,21 @@ const NotificationPage = () => {
       )}
       <Table exportFileName="notifications"
              loading={loading}
-             columns={tableColumns} data={tableData} />
+             columns={tableColumns}
+             data={tableData}
+             page={page}
+             pageSize={pageSize}
+             totalCount={totalElements}
+             onPageChange={(newPage) => {
+               setPage(newPage);
+               fetchData(newPage, pageSize);
+             }}
+             onPageSizeChange={(newSize) => {
+               setPageSize(newSize);
+               setPage(1);
+               fetchData(1, newSize);
+             }}
+      />
       </div>
     </>
   );
