@@ -222,44 +222,96 @@ const Table = ({
   };
 
   const exportToCSV = () => {
-    // Use original data for export to avoid formatted currency values
-    const exportData = safeOriginalData.map((row) => {
+    // Determine which data to use for export
+    const dataToExport = safeOriginalData.length > 0 ? safeOriginalData : safeData;
+
+    // If there's no data, show an alert
+    if (!dataToExport || dataToExport.length === 0) {
+      alert("No data available to export");
+      return;
+    }
+
+    // Prepare the export data
+    const exportData = dataToExport.map((row) => {
       const exportRow = {};
       columns.forEach((col) => {
-        // Export the raw numeric values instead of formatted strings
-        exportRow[col.Header] = row[col.accessor];
+        // Check if the accessor is nested (e.g., "user.name")
+        let value = row;
+        const accessors = col.accessor.split('.');
+
+        for (let i = 0; i < accessors.length; i++) {
+          if (value && typeof value === 'object') {
+            value = value[accessors[i]];
+          } else {
+            value = undefined;
+            break;
+          }
+        }
+
+        // Use the raw value or empty string if undefined/null
+        exportRow[col.Header] = value !== undefined && value !== null ? value : '';
       });
       return exportRow;
     });
+
+    console.log("Exporting data:", exportData); // Debug log
 
     const csv = Papa.unparse(exportData);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `${exportFileName}.csv`);
+    link.setAttribute("download", `${exportFileName}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const exportToExcel = () => {
-    // Use original data for export to avoid formatted currency values
-    const exportData = safeOriginalData.map((row) => {
+    // Determine which data to use for export
+    const dataToExport = safeOriginalData.length > 0 ? safeOriginalData : safeData;
+
+    // If there's no data, show an alert
+    if (!dataToExport || dataToExport.length === 0) {
+      alert("No data available to export");
+      return;
+    }
+
+    // Prepare the export data
+    const exportData = dataToExport.map((row) => {
       const exportRow = {};
       columns.forEach((col) => {
-        // Export the raw numeric values instead of formatted strings
-        exportRow[col.Header] = row[col.accessor];
+        // Check if the accessor is nested (e.g., "user.name")
+        let value = row;
+        const accessors = col.accessor.split('.');
+
+        for (let i = 0; i < accessors.length; i++) {
+          if (value && typeof value === 'object') {
+            value = value[accessors[i]];
+          } else {
+            value = undefined;
+            break;
+          }
+        }
+
+        // Use the raw value or empty string if undefined/null
+        exportRow[col.Header] = value !== undefined && value !== null ? value : '';
       });
       return exportRow;
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-    XLSX.writeFile(workbook, `${exportFileName}.xlsx`);
-  };
+    console.log("Exporting to Excel:", exportData); // Debug log
 
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+      XLSX.writeFile(workbook, `${exportFileName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      alert("Error exporting to Excel. Please check the console for details.");
+    }
+  };
   const hasPermission = (requiredPermission) => {
     if (!requiredPermission) return true;
     return userRoles.some((role) => requiredPermission.includes(role));
