@@ -126,7 +126,10 @@ const ReturnDefinitionPage = () => {
     //   }))
     // },
   
-    { label: 'Description', name: 'description', required: true, type: 'textarea' },  
+    { label: 'Description', name: 'description', required: true, type: 'textarea' },
+    { label: 'Responsible Person Name', name: 'name', required: true },
+    { label: 'Responsible Person Surname', name: 'surname', required: true },
+    { label: 'Responsible Person Email', name: 'email', required: true },
   ];
 
   useEffect(() => {
@@ -263,7 +266,12 @@ const ReturnDefinitionPage = () => {
       const dataToSubmit = {
         ...submittedData,
         responsibleDepartmentId: userData.department.id,
-        responsiblePerson: userData.department.responsiblePersonEmail
+        // responsiblePerson: userData.department.responsiblePersonEmail
+        responsiblePerson:{
+          name: submittedData.name,
+          surname: submittedData.surname,
+          email: submittedData.email,
+        }
       };
   
       if (editReturnDefinition) {

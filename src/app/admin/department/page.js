@@ -10,8 +10,8 @@ import '../../globals.css';
 
 const columns = [
   { Header: 'Name', accessor: 'departmentName' },
-  { Header: 'Responsible Person', accessor: 'responsiblePerson' },
-  { Header: 'Responsible Person Email', accessor: 'responsiblePersonEmail' },
+  // { Header: 'Responsible Person', accessor: 'responsiblePerson' },
+  // { Header: 'Responsible Person Email', accessor: 'responsiblePersonEmail' },
   { Header: 'Escalation Email', accessor: 'escalationEmail' },
   { Header: 'Manager', accessor: 'headOfDepartmentEmail' },
 ];
@@ -25,10 +25,10 @@ const getCellValue = (row, accessor) => {
 
 const fields = [
     { label: 'Department', name: 'departmentName', required: true },
-    { label: 'Responsible Person', name: 'responsiblePerson', required: true},
-    { label: 'Responsible Person Email', name: 'responsiblePersonEmail', required: true },  
+    // { label: 'Responsible Person', name: 'responsiblePerson', required: true},
+    // { label: 'Responsible Person Email', name: 'responsiblePersonEmail', required: true },
     { label: 'Escalation Email', name: 'escalationEmail', required: true },
-    { label: 'Manager', name: 'headOfDepartmentEmail', required: true },
+    { label: 'Manager Email', name: 'headOfDepartmentEmail', required: true },
   ];
 
 
