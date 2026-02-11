@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../_utils/apiClient';
 import Table from '../../_components/Table';
@@ -42,24 +42,32 @@ const UserPage = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const router = useRouter();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
 
-    const fetchData = async () => {
+    const fetchData= useCallback(async (requestedPage = page, requestedPageSize = pageSize) =>{
       setLoading(true);
       setError(null);
+      const apiPage = Math.max(0, Number(requestedPage) - 1);
+      const apiSize = Number(requestedPageSize);
       try {
-        const res = await apiClient.get(`/api/auth/users`);
+        const res = await apiClient.get(`/api/auth/users?page=${apiPage}&size=${apiSize}`);
         setData(res.content || []);
+        const total = res?.page?.totalElements || res?.totalElements || res?.total;
+        setTotalElements(typeof total === 'number' ? total : (res?.content || []).length);
       } catch (err) {
         setError(err.message);
         setShowNotification(true);
       } finally {
         setLoading(false);
       }
-    };
+    },[page, pageSize]);
 
     useEffect(() => {
-      fetchData();
-    }, []);
+      fetchData(page, pageSize);
+    }, [fetchData, page, pageSize]);
+
   const getFields = () =>[
     { label: 'Username', name: 'username', required: true },
     { label: 'Email', name: 'email', required: true},
@@ -203,6 +211,14 @@ const UserPage = () => {
       <Table exportFileName="User"
              columns={tableColumns}
              loading={loading}
+             page={page}
+             pageSize={pageSize}
+             totalCount={totalElements}
+             onPageChange={(newPage) => setPage(newPage)}
+             onPageSizeChange={(newSize) => {
+               setPageSize(newSize);
+               setPage(1);
+             }}
              data={tableData}  />
       </div>
     </>
