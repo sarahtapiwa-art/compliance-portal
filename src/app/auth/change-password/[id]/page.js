@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiLogIn, FiUser, FiLock } from 'react-icons/fi';
+import { FiLogIn, FiLock } from 'react-icons/fi';
 import styles from '../../../../styles/Login.module.css';
-import {useParams, useRouter} from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { apiClient } from '../../../_utils/apiClient';
 
 export default function ResetPasswordPage() {
@@ -13,9 +13,11 @@ export default function ResetPasswordPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+
     const router = useRouter();
     const params = useParams();
     const token = params.id;
+
     const validatePasswords = () => {
         if (newPassword !== confirmNewPassword) {
             setPasswordError('Passwords do not match');
@@ -34,27 +36,23 @@ export default function ResetPasswordPage() {
         setError('');
         setPasswordError('');
 
-        // Validate passwords before submitting
-        if (!validatePasswords()) {
-            return;
-        }
+        if (!validatePasswords()) return;
 
         setIsLoading(true);
+
         try {
-            const data = await apiClient.post(
+            await apiClient.post(
                 '/api/auth/password-reset',
-                { token, newPassword,confirmNewPassword},
+                { token, newPassword, confirmNewPassword },
                 {
                     'Content-Type': 'application/json',
                 }
             );
-            // Optional: Add success message or redirect
-            try {
-                document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-                router.push('/auth/login');
-            } catch (error) {
-                setError(error.message);
-            }
+
+            // Clear token and redirect
+            document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+            router.push('/auth/login');
+
         } catch (err) {
             setError(err?.data?.message || err.message || 'Change Password failed');
         } finally {
@@ -62,15 +60,13 @@ export default function ResetPasswordPage() {
         }
     };
 
-    // Real-time validation for confirm password
     const handleConfirmPasswordChange = (e) => {
         const value = e.target.value;
         setConfirmPassword(value);
 
-        // Only show error if confirm password has value and doesn't match
         if (value && newPassword !== value) {
             setPasswordError('Passwords do not match');
-        } else if (value && newPassword === value) {
+        } else {
             setPasswordError('');
         }
     };
@@ -89,6 +85,7 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.form}>
+
                     {error && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
@@ -110,21 +107,21 @@ export default function ResetPasswordPage() {
                     )}
 
                     <div className={styles.inputGroup}>
-                        <label htmlFor="newPassword" className={styles.inputLabel}>New Password</label>
+                        <label className={styles.inputLabel}>New Password</label>
                         <div className={styles.inputContainer}>
                             <div className={styles.inputIcon}>
                                 <FiLock />
                             </div>
                             <input
-                                id="newPassword"
                                 type="password"
                                 value={newPassword}
                                 onChange={(e) => {
-                                    setNewPassword(e.target.value);
-                                    // Re-validate when new password changes
-                                    if (confirmNewPassword && e.target.value !== confirmNewPassword) {
+                                    const value = e.target.value;
+                                    setNewPassword(value);
+
+                                    if (confirmNewPassword && value !== confirmNewPassword) {
                                         setPasswordError('Passwords do not match');
-                                    } else if (confirmNewPassword && e.target.value === confirmNewPassword) {
+                                    } else {
                                         setPasswordError('');
                                     }
                                 }}
@@ -137,13 +134,12 @@ export default function ResetPasswordPage() {
                     </div>
 
                     <div className={styles.inputGroup}>
-                        <label htmlFor="confirmNewPassword" className={styles.inputLabel}>Confirm New Password</label>
+                        <label className={styles.inputLabel}>Confirm New Password</label>
                         <div className={styles.inputContainer}>
                             <div className={styles.inputIcon}>
                                 <FiLock />
                             </div>
                             <input
-                                id="confirmNewPassword"
                                 type="password"
                                 value={confirmNewPassword}
                                 onChange={handleConfirmPasswordChange}
@@ -155,10 +151,9 @@ export default function ResetPasswordPage() {
                         </div>
                     </div>
 
-
                     <div className={styles.options}>
                         <a href="/auth/login" className={styles.forgotPassword}>
-                            Login
+                            Back to Login
                         </a>
                     </div>
 
@@ -180,8 +175,8 @@ export default function ResetPasswordPage() {
                             </>
                         )}
                     </motion.button>
-                </form>
 
+                </form>
             </motion.div>
         </div>
     );

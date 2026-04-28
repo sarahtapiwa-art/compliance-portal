@@ -19,17 +19,7 @@
     position: relative;
   }
   
-  .logoContainer {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 1.25rem;
-  }
-  
-  .logo {
-    object-fit: contain;
-    height: auto;
-    max-height: 40px;
-  }
+
   
   .header {
     text-align: center;
