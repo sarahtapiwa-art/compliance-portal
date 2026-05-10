@@ -40,13 +40,17 @@ export default function LoginPage() {
         const authority = decoded.roles?.[0];
 
         if (
+            authority === 'ROLE_SUPER_SYSTEM_ADMIN' ||
+            authority === 'ROLE_USER' ||
+            authority === 'ROLE_ADMIN' ||
             authority === 'SUPER_SYSTEM_ADMIN' ||
             authority === 'USER' ||
             authority === 'ADMIN'
         ) {
           router.push('/dashboard');
+        } else {
+          setError('Login failed: Unauthorized role');
         }
-
       } else {
         setError('Login failed: No token received');
       }
@@ -66,7 +70,6 @@ export default function LoginPage() {
             transition={{ duration: 0.5 }}
             className={styles.card}
         >
-
           <div className={styles.header}>
             <h1 className={styles.title}>Compliance Portal</h1>
             <p className={styles.subtitle}>Sign in to your Compliance account</p>
@@ -86,9 +89,7 @@ export default function LoginPage() {
             <div className={styles.inputGroup}>
               <label htmlFor="username" className={styles.inputLabel}>Username</label>
               <div className={styles.inputContainer}>
-                <div className={styles.inputIcon}>
-                  <FiUser />
-                </div>
+                <div className={styles.inputIcon}><FiUser /></div>
                 <input
                     id="username"
                     type="text"
@@ -104,9 +105,7 @@ export default function LoginPage() {
             <div className={styles.inputGroup}>
               <label htmlFor="password" className={styles.inputLabel}>Password</label>
               <div className={styles.inputContainer}>
-                <div className={styles.inputIcon}>
-                  <FiLock />
-                </div>
+                <div className={styles.inputIcon}><FiLock /></div>
                 <input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -161,7 +160,6 @@ export default function LoginPage() {
               </a>
             </p>
           </div>
-
         </motion.div>
       </div>
   );
