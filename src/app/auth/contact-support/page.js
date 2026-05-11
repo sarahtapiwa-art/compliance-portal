@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiMail, FiLogIn } from 'react-icons/fi';
@@ -8,60 +7,14 @@ import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 
 export default function ContactSupportPage() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState({ success: false, message: '' });
   const router = useRouter();
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitStatus({ success: false, message: '' });
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setSubmitStatus({
-        success: true,
-        message: 'Your message has been sent successfully! We will respond within 24 hours.'
-      });
-
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        message: ''
-      });
-
-    } catch (error) {
-      setSubmitStatus({
-        success: false,
-        message: 'Failed to send your message. Please try again later.'
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
       <>
         <Head>
           <title>Contact Support | Portal</title>
         </Head>
-
         <div className={styles.container}>
           <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -69,7 +22,6 @@ export default function ContactSupportPage() {
               transition={{ duration: 0.5 }}
               className={styles.card}
           >
-
             <div className={styles.header}>
               <h1 className={styles.title}>Contact Support</h1>
               <p className={styles.subtitle}>We are here to help with any questions or issues</p>
@@ -82,7 +34,7 @@ export default function ContactSupportPage() {
                 </div>
                 <div>
                   <h3>Email Us</h3>
-                  <p>sarahtapiwa@gmail.com</p>
+                  <p><a href="mailto:sarahtapiwa@gmail.com">sarahtapiwa@gmail.com</a></p>
                 </div>
               </div>
 
@@ -94,7 +46,7 @@ export default function ContactSupportPage() {
                 </div>
                 <div>
                   <h3>Call Us</h3>
-                  <p>+263 786 239 240</p>
+                  <p><a href="tel:+263786239240">+263 786 239 240</a></p>
                 </div>
               </div>
             </div>
@@ -107,16 +59,10 @@ export default function ContactSupportPage() {
                 className={styles.submitButton}
                 onClick={() => router.push('/auth/login')}
             >
-              {isSubmitting ? (
-                  <div className={styles.spinnerContainer}>
-                    <div className={styles.spinner}></div>
-                  </div>
-              ) : (
-                  <>
-                    <FiLogIn className={styles.buttonIcon} />
-                    Back to Login
-                  </>
-              )}
+              <>
+                <FiLogIn className={styles.buttonIcon} />
+                Back to Login
+              </>
             </motion.button>
 
           </motion.div>
