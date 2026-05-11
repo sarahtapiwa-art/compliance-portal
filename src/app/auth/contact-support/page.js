@@ -82,7 +82,7 @@ export default function ContactSupportPage() {
                 </div>
                 <div>
                   <h3>Email Us</h3>
-                  <p>ictsupport@nbs.co.zw</p>
+                  <p>sarahtapiwa@gmail.com</p>
                 </div>
               </div>
 
@@ -94,7 +94,7 @@ export default function ContactSupportPage() {
                 </div>
                 <div>
                   <h3>Call Us</h3>
-                  <p>+263 774 169 468</p>
+                  <p>+263 786 239 240</p>
                 </div>
               </div>
             </div>
