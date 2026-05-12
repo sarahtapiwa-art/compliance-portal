@@ -30,6 +30,7 @@ const adminItems = [
   { name: "Submissions", href: "/admin/submissions", icon: FiFileText },
   { name: "Task Track", href: "/admin/task-track", icon: FiFileText },
   { name: "Notifications", href: "/admin/notifications", icon: FiBell },
+  { name: "Calendar", href: "/calendar", icon: FiCalendar },
   { name: "Users", href: "/admin/users", icon: FiUsers },
 
 ];
@@ -42,7 +43,7 @@ const userItems = [
   { name: "Submissions", href: "/admin/submissions", icon: FiFileText },
   { name: "Task Track", href: "/admin/task-track", icon: FiFileText },
   { name: "Notifications", href: "/admin/notifications", icon: FiBell },
-
+{ name: "Calendar", href: "/calendar", icon: FiCalendar }, 
 ];
 
 
