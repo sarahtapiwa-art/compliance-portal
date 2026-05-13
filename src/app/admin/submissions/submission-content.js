@@ -218,10 +218,32 @@ const SubmissionsContent = () => {
       Header: col.Header,
       accessor: col.Header.replace(/\s+/g, '_').toLowerCase(),
     })),
+    {
+      Header: 'Actions',
+      accessor: 'actions',
+    }
   ];
 
   const formattedTableData = tableData.map(row => ({
     ...row,
+    actions: (
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {(row.original.status === 'PENDING' || row.original.status === 'OVERDUE' || row.original.status === 'UPLOADED' || row.original.status === 'UPLOADED_OVERDUE') && (
+          <button
+            onClick={() => router.push('/admin/submissions/' + row.original.id)}
+            style={{ backgroundColor: '#166534', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}
+          >
+            Upload File
+          </button>
+        )}
+        <button
+          onClick={() => router.push('/admin/submissions/' + row.original.id)}
+          style={{ backgroundColor: '#e5e7eb', color: '#374151', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+        >
+          View
+        </button>
+      </div>
+    ),
   }));
 
   return (
@@ -324,7 +346,7 @@ const SubmissionsContent = () => {
         exportFileName="Submissions"
         columns={tableColumns}
         data={formattedTableData}
-        onView={handleView}
+        
         showSearch={false}
         page={page}
         pageSize={pageSize}
@@ -339,10 +361,12 @@ const SubmissionsContent = () => {
           fetchData(1, newSize);
         }}
         loading={loading}
-        showViewButton={(row) => row.original.status === "SUBMITTED"}
+        
       />
     </div>
   );
 };
 
 export default SubmissionsContent;
+
+
