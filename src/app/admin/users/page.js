@@ -219,7 +219,8 @@ const UserPage = () => {
                setPageSize(newSize);
                setPage(1);
              }}
-             data={tableData}  />
+             data={tableData}
+             onEdit={handleEdit}  />
       </div>
     </>
   );

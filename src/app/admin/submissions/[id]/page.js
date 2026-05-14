@@ -1,9 +1,9 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useMsal } from '@azure/msal-react';
-import { loginRequest } from '../../../lib/msalConfig';
-import { sendEmail } from '../../../lib/graphClient';
+// MSAL removed
+// MSAL removed
+// MSAL removed
 import { apiClient } from '../../../_utils/apiClient';
 import Notification from '../../../_components/Notifications/page';
 import '../../../globals.css';
@@ -35,12 +35,10 @@ const SubmissionViewPage = () => {
   // } = useAuth();
 
   // ... rest of your state
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Sync auth state with your component state
   // useEffect(() => {
   //   if (!authLoading) {
-  //     setIsLoggedIn(isAuthenticated);
   //   }
   // }, [isAuthenticated, authLoading]);
 
@@ -51,7 +49,7 @@ const SubmissionViewPage = () => {
   const [additionalMessage, setAdditionalMessage] = useState('');
 
 // Get MSAL instance
-  const { instance, accounts } = useMsal();
+  // MSAL removed
   const router = useRouter();
   const params = useParams();
   const submissionId = params.id;
@@ -91,7 +89,6 @@ const SubmissionViewPage = () => {
   const [userRole, setUserRole] = useState('');
   const [decodedToken, setDecodedToken] = useState(null);
 
-  const [microsoftToken, setMicrosoftToken] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const fetchSubmission = async () => {
     setLoading(true);
@@ -99,7 +96,13 @@ const SubmissionViewPage = () => {
     try {
       const res = await apiClient.get(`/api/v1/submissions/${submissionId}`);
       setSubmission(res);
-      setAttachingPersonEmail(res.returnDefinition.department.responsiblePersonEmail || '');
+      const token = sessionStorage.getItem('token');
+      if (token) {
+        try {
+          const decoded = jwtDecode(token);
+          setAttachingPersonEmail(decoded.email || decoded.sub || '');
+        } catch(e) {}
+      }
       const id = res.returnDefinition.documentId
       setDocumentId(id)
       // Fetching Document
@@ -125,38 +128,8 @@ const SubmissionViewPage = () => {
       setLoading(false);
     }
   };
-  const handleOutlookLogin = async () => {
-    try {
-      const response = await instance.loginPopup(loginRequest);
-
-      if (response && response.account) {
-        setIsLoggedIn(true);
-        setUserEmail(response.account.username || response.account.name);
-
-        // Try to get user profile
-        try {
-          const tokenResponse = await instance.acquireTokenSilent({
-            ...loginRequest,
-            account: response.account
-          });
-          console.log('Token', tokenResponse);
-          setMicrosoftToken(tokenResponse.accessToken);
-
-          // You could fetch user details here if needed
-          console.log('Login successful for:', response.account.username);
-        } catch (tokenError) {
-          console.log('Got account but token acquisition needed');
-        }
-      }
-    } catch (error) {
-      console.error('Outlook login failed:', error);
-      alert(`Login failed: ${error.message}. Please try again.`);
-    }
-  };
-  // const handleOutlookLogin = async () => {
   //   try {
   //     await login();
-  //     // No need to manually set isLoggedIn, useAuth hook will handle it
   //   } catch (error) {
   //     console.error('Login failed:', error);
   //     alert(`Login failed: ${error.message}. Please try again.`);
@@ -210,6 +183,12 @@ const SubmissionViewPage = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "text/plain"];
+      if (!allowedTypes.includes(file.type)) {
+        setError("Invalid file type. Only PDF, JPEG, PNG and TXT files are allowed.");
+        setShowNotification(true);
+        return;
+      }
       if (file.size > 10 * 1024 * 1024) {
         setError('File size exceeds 10MB limit');
         setShowNotification(true);
@@ -316,96 +295,32 @@ const SubmissionViewPage = () => {
     }
   };
   const handleSendSubmission = async () => {
-
-
-    if (!accounts[0]) {
-      alert('Please sign in with Outlook first');
+    if (!emailCredentials.username || !emailCredentials.password) {
+      setError('Gmail username and app password are required');
+      setShowNotification(true);
       return;
     }
-
     setSending(true);
-
+    setError(null);
     try {
-      // Get access token
-      const tokenResponse = await instance.acquireTokenSilent({
-        ...loginRequest,
-        account: accounts[0]
-      }).catch(async (error) => {
-        // If silent acquisition fails, try popup
-        if (error.name === 'InteractionRequiredAuthError') {
-          return await instance.acquireTokenPopup(loginRequest);
-        }
-        throw error;
-      });
-      console.log('MiCRO', tokenResponse);
-
-    
-
-      // Update submission status in your backend
-        setSending(true);
-        setError(null);
-
-        try {
-          let url = `/api/v1/submissions/${submissionId}/send-outlook`;
-
-          // if (emailCredentials.cc.length > 0) {
-          //   const queryParams = emailCredentials.cc
-          //     .map(email => `cc=${encodeURIComponent(email)}`)
-          //     .join('&');
-          //   url += `?${queryParams}`;
-          // }
-          const headers = {
-            'accept': 'application/json',
-            // 'Authorization': `Bearer ${microsoftToken}`,
-            'Content-Type': 'application/json'
-          };
-          console.log('Email',emailCredentials.cc)
-          await apiClient.outlookPost(
-            url,
-            {
-
-              email: decodedToken?.email,
-              microsoftToken:`Bearer ${microsoftToken}`,
-                  recipients: emailCredentials.cc,
-            },
-              headers,
-          );
-
-          setSuccessMessage('Submission sent successfully!');
-          setShowSuccessNotification(true);
-
-          await fetchSubmission();
-        } catch (err) {
-          setError(err.message || 'Failed to send submission');
-          setShowNotification(true);
-        } finally {
-          setSending(false);
-        }
-
-      if (!submissionResponse.ok) {
-        throw new Error('Failed to update submission status');
+      let url = `/api/v1/submissions/${submissionId}/send`;
+      if (emailCredentials.cc && emailCredentials.cc.length > 0) {
+        const queryParams = emailCredentials.cc
+          .map(email => `cc=${encodeURIComponent(email)}`)
+          .join('&');
+        url += `?${queryParams}`;
       }
-
-      // Success!
-
-
-      // Optional: Refresh the page or update state
-      // router.refresh(); // If using Next.js 13+ App Router
-
-    } catch (error) {
-      // console.error('Error sending submission:', error);
-      //
-      // let errorMessage = 'Failed to send submission. ';
-      //
-      // if (error.message.includes('Mail.Send')) {
-      //   errorMessage += 'Please ensure you have granted Mail.Send permission for this app.';
-      // } else if (error.message.includes('AADSTS65001')) {
-      //   errorMessage += 'Consent required. Please sign in again and accept all permissions.';
-      // } else {
-      //   errorMessage += error.message;
-      // }
-      //
-      // alert(errorMessage);
+      await apiClient.post(url, {
+        username: emailCredentials.username,
+        password: emailCredentials.password,
+        subject: emailCredentials.subject || 'Compliance Submission'
+      });
+      setSuccessMessage('Submission sent successfully via Gmail!');
+      setShowSuccessNotification(true);
+      await fetchSubmission();
+    } catch (err) {
+      setError(err.message || 'Failed to send submission');
+      setShowNotification(true);
     } finally {
       setSending(false);
     }
@@ -504,7 +419,8 @@ const SubmissionViewPage = () => {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       if (!token) throw new Error("Missing authentication token");
 
-      const response = await fetch(`http://192.168.1.145:18000/api/v1/documents/${id}/view`, {
+      const baseUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:18000' : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.3.143:18000');
+      const response = await fetch(`${baseUrl}/api/v1/documents/${id}/view`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -771,7 +687,7 @@ const SubmissionViewPage = () => {
           
           <button
             onClick={handleAttachFile}
-            disabled={uploading || !attachedFile || !attachingPersonEmail}
+            disabled={uploading || !attachedFile}
             className={`action-button ${uploading ? 'loading' : ''}`}
           >
             {uploading ? 'Uploading...' : 'Attach File'}
@@ -1273,138 +1189,115 @@ const SubmissionViewPage = () => {
           <div className="action-card">
             <div className="action-header">
               <FiSend className="action-icon" />
-              <h3>Send Submission via Outlook</h3>
+              <h3>Send Submission via Gmail</h3>
             </div>
 
             <div className="status-card success">
               <FiCheckCircle className="status-icon" />
               <div>
                 <h4>File Approved</h4>
-                <p>Your file has been verified and approved. You can now send the submission via Outlook.</p>
+                <p>Your file has been verified and approved. You can now send the submission via Gmail.</p>
               </div>
             </div>
 
-            {!isLoggedIn ? (
-                <>
-                  <p className="action-description">
-                    Sign in with your Outlook/Microsoft account to send this submission to the regulatory body.
-                    You&#39;ll need to grant Mail.Send permission.
-                  </p>
+            <p className="action-description">
+              Enter your Gmail credentials to send this submission to the regulatory body.
+              Use a Gmail App Password (not your regular password).
+            </p>
 
-                  <button
-                      onClick={handleOutlookLogin}
-                      className="outlook-login-button"
-                      style={{
-                        backgroundColor: '#0078d4',
-                        color: 'white',
-                        padding: '10px 20px',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        marginBottom: '20px'
-                      }}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                    Sign in with Microsoft Account
-                  </button>
-                </>
-            ) : (
-                <>
+            <div className="form-group">
+              <label className="form-label">Gmail Address:</label>
+              <input
+                type="email"
+                name="username"
+                value={emailCredentials.username}
+                onChange={handleInputChange}
+                className="form-input"
+                placeholder="yourname@gmail.com"
+              />
+            </div>
 
+            <div className="form-group">
+              <label className="form-label">Gmail App Password:</label>
+              <input
+                type="password"
+                name="password"
+                value={emailCredentials.password}
+                onChange={handleInputChange}
+                className="form-input"
+                placeholder="16-character app password"
+              />
+              <small style={{ color: '#666', fontSize: '0.8rem' }}>
+                Generate at myaccount.google.com/apppasswords
+              </small>
+            </div>
 
+            <div className="form-group">
+              <label className="form-label">Subject:</label>
+              <input
+                type="text"
+                name="subject"
+                value={emailCredentials.subject}
+                onChange={handleInputChange}
+                className="form-input"
+                placeholder="Compliance Submission"
+              />
+            </div>
 
-                  <div className="form-group">
-                    <label className="form-label">CC Emails:</label>
-
-                    <div className="cc-input-group">
-                      <input
-                          type="text"
-                          value={ccInput}
-                          onChange={handleCcInputChange}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addCcEmail();
-                            }
-                          }}
-                          className="form-input"
-                          placeholder="Enter CC email and press Enter or click Add"
-                      />
-                      <button
-                          onClick={addCcEmail}
-                          disabled={!ccInput.trim() || !isValidEmail(ccInput.trim())}
-                          className="add-cc-button"
-                      >
-                        Add
-                      </button>
+            <div className="form-group">
+              <label className="form-label">CC Emails:</label>
+              <div className="cc-input-group">
+                <input
+                  type="text"
+                  value={ccInput}
+                  onChange={handleCcInputChange}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); addCcEmail(); }
+                  }}
+                  className="form-input"
+                  placeholder="Enter CC email and press Enter or click Add"
+                />
+                <button
+                  onClick={addCcEmail}
+                  disabled={!ccInput.trim() || !isValidEmail(ccInput.trim())}
+                  className="add-cc-button"
+                >
+                  Add
+                </button>
+              </div>
+              {emailCredentials.cc.length > 0 && (
+                <div className="cc-recipients">
+                  <div className="cc-label">CC Recipients:</div>
+                  {emailCredentials.cc.map((email, index) => (
+                    <div key={index} className="cc-tag">
+                      {email}
+                      <button onClick={() => removeCcEmail(index)} className="remove-cc-button">×</button>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-                    {ccEmails.length > 0 && (
-                        <div className="cc-recipients">
-                          <div className="cc-label">CC Recipients:</div>
-                          {ccEmails.map((email, index) => (
-                              <div key={index} className="cc-tag">
-                                {email}
-                                <button
-                                    onClick={() => removeCcEmail(index)}
-                                    className="remove-cc-button"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                          ))}
-                        </div>
-                    )}
-                  </div>
-
-
-
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                    <button
-                        onClick={() => setIsLoggedIn(false)}
-                        className="secondary-button"
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor: '#6c757d',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                    >
-                      Use Different Account
-                    </button>
-
-                    <button
-                        onClick={handleSendSubmission}
-                        disabled={sending }
-                        className={`action-button primary ${sending ? 'loading' : ''}`}
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor:  '#006834',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor:  'pointer',
-                          flex: 1
-                        }}
-                    >
-                      {sending ? (
-                          <>
-                            <span className="spinner" style={{marginRight: '8px'}}></span>
-                            Sending via Outlook...
-                          </>
-                      ) : 'Send Submission via Outlook'}
-                    </button>
-                  </div>
-                </>
-            )}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={handleSendSubmission}
+                disabled={sending}
+                className={`action-button primary ${sending ? 'loading' : ''}`}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#006834',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                {sending ? (
+                  <><span className="spinner" style={{marginRight: '8px'}}></span>Sending via Gmail...</>
+                ) : 'Send Submission via Gmail'}
+              </button>
+            </div>
           </div>
       )}
       {/* Completed Submission */}
