@@ -504,12 +504,12 @@ const SubmissionViewPage = () => {
 
     } catch (err) {
       console.error("Failed to load file:", err);
-      setError(`Failed to view file: ${err.message}`);
-      setShowNotification(true);
       setViewingFile(null);
       setFileType(null);
     }
   };
+
+
   const downloadFile = async (fileId, fileName) => {
     try {
       const file = submission.files.find(f => f.id === fileId);
